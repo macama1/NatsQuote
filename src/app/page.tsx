@@ -1,6 +1,9 @@
+// src/app/page.tsx
+
 'use client';
 import { useState, useEffect } from 'react';
-import { SingleValue } from 'react-select';
+// CORRECCIÓN: Se importa MultiValue para usarlo en los tipos
+import { SingleValue, MultiValue } from 'react-select'; 
 
 // Importa los componentes y los tipos
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption, BankInfo, SellerContacts } from '@/types';
@@ -20,7 +23,6 @@ export default function CotizadorPage() {
   const [selectedCompany, setSelectedCompany] = useState<SelectOption | null>(null);
   const [selectedPDV, setSelectedPDV] = useState<ClientEntry | null>(null);
   
-  // Estados para los campos editables de RUT y Dirección
   const [editableRut, setEditableRut] = useState('');
   const [editableDireccion, setEditableDireccion] = useState('');
   
@@ -31,6 +33,7 @@ export default function CotizadorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [bankData, setBankData] = useState<BankInfo[]>([]);
   const [sellerContacts, setSellerContacts] = useState<SellerContacts>({});
+  const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
   
   const fetchData = () => {
     fetch(`${API_URL}`).then(res => res.json()).then(setAllClientEntries).catch(err => console.error("Error fetching clients:", err));
@@ -41,18 +44,21 @@ export default function CotizadorPage() {
   };
   useEffect(fetchData, []);
 
-  const handleSelectCompany = (option: SingleValue<SelectOption>) => {
-    setSelectedCompany(option);
+  // CORRECCIÓN: Se actualiza el tipo del parámetro 'option'
+  const handleSelectCompany = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
+    // TypeScript ahora está feliz, pero nos aseguramos de que no sea un array
+    const singleOption = Array.isArray(option) ? option[0] : option;
+    setSelectedCompany(singleOption);
     setSelectedPDV(null);
-    // Limpia los campos editables al cambiar de empresa
     setEditableRut('');
     setEditableDireccion('');
   };
 
-  const handleSelectPDV = (option: SingleValue<SelectOption>) => {
-    const fullPdvData = allClientEntries.find(c => c.id === option?.value);
+  // CORRECCIÓN: Se actualiza el tipo del parámetro 'option'
+  const handleSelectPDV = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
+    const singleOption = Array.isArray(option) ? option[0] : option;
+    const fullPdvData = allClientEntries.find(c => c.id === singleOption?.value);
     setSelectedPDV(fullPdvData || null);
-    // Al seleccionar un PDV, se actualizan los campos editables
     if (fullPdvData) {
       setEditableRut(fullPdvData.rut || '');
       setEditableDireccion(fullPdvData.direccion || '');
@@ -86,7 +92,8 @@ export default function CotizadorPage() {
         const basePrice = p.originalData.basePrice;
         let discount = 0;
         if (newQuantity >= 500) discount = 0.20; else if (newQuantity >= 300) discount = 0.15; else if (newQuantity >= 100) discount = 0.10; else if (newQuantity >= 50) discount = 0.03;
-        if (p.originalData.modelo === 'HORMIGÓN A LA VISTA TABLEADO') discount = Math.min(discount, 0.10);
+        const originalData = p.originalData as CA_SKU;
+        if (originalData.modelo === 'HORMIGÓN A LA VISTA TABLEADO') discount = Math.min(discount, 0.10);
         finalPrice = basePrice * (1 - discount);
       }
       return { ...p, quantity: Math.max(0, newQuantity), currentPrice: finalPrice };
@@ -104,14 +111,9 @@ export default function CotizadorPage() {
 
     try {
       const sellerContact = sellerContacts[selectedPDV.vendedor.trim()] || { email: '', phone: '' };
-
       const quoteData = {
         selectedPDV,
-        // Se envían los datos editables para usarlos en el PDF
-        editableClientData: {
-          rut: editableRut,
-          direccion: editableDireccion
-        },
+        editableClientData: { rut: editableRut, direccion: editableDireccion },
         quoteProducts: quoteProducts.map(p => ({
             code: p.code, description: p.description, quantity: p.quantity,
             currentPrice: p.currentPrice, basePrice: p.originalData.basePrice
@@ -132,13 +134,17 @@ export default function CotizadorPage() {
 
       if (result.status === 'success') {
         alert(`¡Cotización N° ${result.quoteNumber} registrada y generada con éxito!`);
-        window.open(result.pdfUrl, '_blank');
+        setGeneratedPdfUrl(result.pdfUrl);
       } else {
         console.error("Server error details:", result);
         throw new Error(result.message || 'Error desconocido del servidor.');
       }
-    } catch (error: any) {
-      alert(`Hubo un problema al generar la cotización: ${error.message}`);
+    } catch (error: unknown) {
+      let errorMessage = 'Hubo un problema al generar la cotización.';
+      if (error instanceof Error) {
+        errorMessage += `: ${error.message}`;
+      }
+      alert(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -162,7 +168,6 @@ export default function CotizadorPage() {
           setFormaDePago={setFormaDePago}
           formaDeEntrega={formaDeEntrega}
           setFormaDeEntrega={setFormaDeEntrega}
-          // Se pasan las props para los campos editables
           editableRut={editableRut}
           setEditableRut={setEditableRut}
           editableDireccion={editableDireccion}
@@ -178,6 +183,22 @@ export default function CotizadorPage() {
       )}
       <ProductTable {...{products: quoteProducts, onQuantityChange: handleQuantityChange, onPriceChange: handlePriceChange, onDelete: handleDeleteProduct}} />
       <QuoteTotals {...{subtotal, iva, total, isGenerating, isClientSelected: !!selectedPDV, onGenerateQuote: handleGenerateQuote}} />
+      {/* AÑADE ESTE BLOQUE DE CÓDIGO */}
+      {generatedPdfUrl && (
+        <div className="flex justify-center md:justify-end mt-4">
+          <div className="w-full md:w-2/5 lg:w-1/3 text-center bg-green-800 p-4 rounded-lg border border-green-600">
+            <h3 className="font-bold text-lg mb-2">¡PDF Generado con éxito!</h3>
+            <a
+              href={generatedPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-green-500 hover:bg-green-400 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
+            >
+              Abrir PDF en una nueva pestaña
+            </a>
+          </div>
+        </div>
+      )}
       {modalType && <ProductModal {...{modalType, onClose: () => setModalType(null), allPyMProducts, allCA_SKUs, onSelectProduct: handleSelectProduct}} />}
     </main>
   );
