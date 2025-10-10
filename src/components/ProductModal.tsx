@@ -16,7 +16,7 @@ const Modal = ({ children, onClose, title }: { children: React.ReactNode; onClos
 );
 
 type ProductModalProps = {
-  modalType: 'PyM' | 'CA';
+  modalType: 'P&M' | 'CA';
   onClose: () => void;
   allPyMProducts: PyMProduct[];
   allCA_SKUs: CA_SKU[];
