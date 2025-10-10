@@ -187,14 +187,14 @@ export default function CotizadorPage() {
       {generatedPdfUrl && (
         <div className="flex justify-center md:justify-end mt-4">
           <div className="w-full md:w-2/5 lg:w-1/3 text-center bg-green-800 p-4 rounded-lg border border-green-600">
-            <h3 className="font-bold text-lg mb-2">¡PDF Generado con éxito!</h3>
+            <h3 className="font-bold text-lg mb-2">¡Cotización Generada con éxito!</h3>
             <a
               href={generatedPdfUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block bg-green-500 hover:bg-green-400 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
             >
-              Abrir PDF en una nueva pestaña
+              DESCARGAR COTIZACIÓN
             </a>
           </div>
         </div>
