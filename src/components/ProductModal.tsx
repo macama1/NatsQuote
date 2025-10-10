@@ -32,7 +32,7 @@ export default function ProductModal({ modalType, onClose, allPyMProducts, allCA
 
   return (
     <Modal onClose={onClose} title={`Seleccionar Producto ${modalType}`}>
-      {modalType === 'P&M' && (
+      {modalType === 'PyM' && (
         <div>
           <input type="text" placeholder="Buscar por código o nombre..." value={pymSearch} onChange={e => setPymSearch(e.target.value)} className="w-full p-2 mb-4 bg-slate-700 rounded border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
           <div className="space-y-1">
