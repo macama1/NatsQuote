@@ -1,9 +1,6 @@
-// src/app/page.tsx
-
 'use client';
 import { useState, useEffect } from 'react';
-// CORRECCIÓN: Se importa MultiValue para usarlo en los tipos
-import { SingleValue, MultiValue } from 'react-select'; 
+import { SingleValue } from 'react-select';
 
 // Importa los componentes y los tipos
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption, BankInfo, SellerContacts } from '@/types';
@@ -23,6 +20,7 @@ export default function CotizadorPage() {
   const [selectedCompany, setSelectedCompany] = useState<SelectOption | null>(null);
   const [selectedPDV, setSelectedPDV] = useState<ClientEntry | null>(null);
   
+  // Estados para los campos editables de RUT y Dirección
   const [editableRut, setEditableRut] = useState('');
   const [editableDireccion, setEditableDireccion] = useState('');
   
@@ -43,21 +41,18 @@ export default function CotizadorPage() {
   };
   useEffect(fetchData, []);
 
-  // CORRECCIÓN: Se actualiza el tipo del parámetro 'option'
-  const handleSelectCompany = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
-    // TypeScript ahora está feliz, pero nos aseguramos de que no sea un array
-    const singleOption = Array.isArray(option) ? option[0] : option;
-    setSelectedCompany(singleOption);
+  const handleSelectCompany = (option: SingleValue<SelectOption>) => {
+    setSelectedCompany(option);
     setSelectedPDV(null);
+    // Limpia los campos editables al cambiar de empresa
     setEditableRut('');
     setEditableDireccion('');
   };
 
-  // CORRECCIÓN: Se actualiza el tipo del parámetro 'option'
-  const handleSelectPDV = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
-    const singleOption = Array.isArray(option) ? option[0] : option;
-    const fullPdvData = allClientEntries.find(c => c.id === singleOption?.value);
+  const handleSelectPDV = (option: SingleValue<SelectOption>) => {
+    const fullPdvData = allClientEntries.find(c => c.id === option?.value);
     setSelectedPDV(fullPdvData || null);
+    // Al seleccionar un PDV, se actualizan los campos editables
     if (fullPdvData) {
       setEditableRut(fullPdvData.rut || '');
       setEditableDireccion(fullPdvData.direccion || '');
@@ -91,8 +86,7 @@ export default function CotizadorPage() {
         const basePrice = p.originalData.basePrice;
         let discount = 0;
         if (newQuantity >= 500) discount = 0.20; else if (newQuantity >= 300) discount = 0.15; else if (newQuantity >= 100) discount = 0.10; else if (newQuantity >= 50) discount = 0.03;
-        const originalData = p.originalData as CA_SKU;
-        if (originalData.modelo === 'HORMIGÓN A LA VISTA TABLEADO') discount = Math.min(discount, 0.10);
+        if (p.originalData.modelo === 'HORMIGÓN A LA VISTA TABLEADO') discount = Math.min(discount, 0.10);
         finalPrice = basePrice * (1 - discount);
       }
       return { ...p, quantity: Math.max(0, newQuantity), currentPrice: finalPrice };
@@ -110,9 +104,14 @@ export default function CotizadorPage() {
 
     try {
       const sellerContact = sellerContacts[selectedPDV.vendedor.trim()] || { email: '', phone: '' };
+
       const quoteData = {
         selectedPDV,
-        editableClientData: { rut: editableRut, direccion: editableDireccion },
+        // Se envían los datos editables para usarlos en el PDF
+        editableClientData: {
+          rut: editableRut,
+          direccion: editableDireccion
+        },
         quoteProducts: quoteProducts.map(p => ({
             code: p.code, description: p.description, quantity: p.quantity,
             currentPrice: p.currentPrice, basePrice: p.originalData.basePrice
@@ -138,12 +137,8 @@ export default function CotizadorPage() {
         console.error("Server error details:", result);
         throw new Error(result.message || 'Error desconocido del servidor.');
       }
-    } catch (error: unknown) {
-      let errorMessage = 'Hubo un problema al generar la cotización.';
-      if (error instanceof Error) {
-        errorMessage += `: ${error.message}`;
-      }
-      alert(errorMessage);
+    } catch (error: any) {
+      alert(`Hubo un problema al generar la cotización: ${error.message}`);
     } finally {
       setIsGenerating(false);
     }
@@ -167,6 +162,7 @@ export default function CotizadorPage() {
           setFormaDePago={setFormaDePago}
           formaDeEntrega={formaDeEntrega}
           setFormaDeEntrega={setFormaDeEntrega}
+          // Se pasan las props para los campos editables
           editableRut={editableRut}
           setEditableRut={setEditableRut}
           editableDireccion={editableDireccion}
@@ -186,3 +182,4 @@ export default function CotizadorPage() {
     </main>
   );
 }
+
