@@ -16,7 +16,7 @@ const Modal = ({ children, onClose, title }: { children: React.ReactNode; onClos
 );
 
 type ProductModalProps = {
-  modalType: 'P&M' | 'CA';
+  modalType: 'PyM' | 'CA';
   onClose: () => void;
   allPyMProducts: PyMProduct[];
   allCA_SKUs: CA_SKU[];
@@ -32,7 +32,7 @@ export default function ProductModal({ modalType, onClose, allPyMProducts, allCA
 
   return (
     <Modal onClose={onClose} title={`Seleccionar Producto ${modalType}`}>
-      {modalType === 'PyM' && (
+      {modalType === 'P&M' && (
         <div>
           <input type="text" placeholder="Buscar por código o nombre..." value={pymSearch} onChange={e => setPymSearch(e.target.value)} className="w-full p-2 mb-4 bg-slate-700 rounded border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
           <div className="space-y-1">
