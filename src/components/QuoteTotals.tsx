@@ -35,10 +35,9 @@ export default function QuoteTotals({
           disabled={isGenerating || !isClientSelected} 
           className="w-full mt-4 p-3 bg-orange-600 hover:bg-orange-500 rounded font-bold text-lg transition-transform duration-200 hover:scale-105 disabled:bg-slate-600 disabled:cursor-not-allowed"
         >
-          {isGenerating ? 'PROCESANDO...' : 'GENERAR COTIZACIÓN'}
+          {isGenerating ? 'Generando...' : 'Descargar y Registrar PDF'}
         </button>
       </div>
     </div>
   );
 }
-
