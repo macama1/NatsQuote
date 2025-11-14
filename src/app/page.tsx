@@ -177,8 +177,8 @@ export default function CotizadorPage() {
       <hr className="border-slate-600 my-10" />
       {selectedPDV && (
         <div className="mb-10 flex flex-col md:flex-row gap-4">
-          <button onClick={() => setModalType('PyM')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto P&M</button>
-          <button onClick={() => setModalType('CA')} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto CA</button>
+          <button onClick={() => setModalType('PyM')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto NatStone</button>
+          <button onClick={() => setModalType('CA')} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto Piettra</button>
         </div>
       )}
       <ProductTable {...{products: quoteProducts, onQuantityChange: handleQuantityChange, onPriceChange: handlePriceChange, onDelete: handleDeleteProduct}} />
