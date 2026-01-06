@@ -2,7 +2,6 @@
 
 'use client';
 import { useState, useEffect } from 'react';
-// CORRECCIÓN: Se importa MultiValue para usarlo en los tipos
 import { SingleValue, MultiValue } from 'react-select'; 
 
 // Importa los componentes y los tipos
@@ -33,7 +32,6 @@ export default function CotizadorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [bankData, setBankData] = useState<BankInfo[]>([]);
   const [sellerContacts, setSellerContacts] = useState<SellerContacts>({});
-  const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
   
   const fetchData = () => {
     fetch(`${API_URL}`).then(res => res.json()).then(setAllClientEntries).catch(err => console.error("Error fetching clients:", err));
@@ -44,9 +42,7 @@ export default function CotizadorPage() {
   };
   useEffect(fetchData, []);
 
-  // CORRECCIÓN: Se actualiza el tipo del parámetro 'option'
   const handleSelectCompany = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
-    // TypeScript ahora está feliz, pero nos aseguramos de que no sea un array
     const singleOption = Array.isArray(option) ? option[0] : option;
     setSelectedCompany(singleOption);
     setSelectedPDV(null);
@@ -54,7 +50,6 @@ export default function CotizadorPage() {
     setEditableDireccion('');
   };
 
-  // CORRECCIÓN: Se actualiza el tipo del parámetro 'option'
   const handleSelectPDV = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
     const singleOption = Array.isArray(option) ? option[0] : option;
     const fullPdvData = allClientEntries.find(c => c.id === singleOption?.value);
@@ -84,21 +79,16 @@ export default function CotizadorPage() {
     setQuoteProducts(quoteProducts.map(p => p.code === code ? { ...p, currentPrice: newPrice } : p));
   };
   
+  // --- FUNCIÓN MODIFICADA: Se eliminó el cálculo de descuentos automáticos ---
   const handleQuantityChange = (code: string, newQuantity: number) => {
     setQuoteProducts(quoteProducts.map(p => {
       if (p.code !== code) return p;
-      let finalPrice = p.currentPrice;
-      if (p.linea === 'CA' && p.originalData.basePrice > 0) {
-        const basePrice = p.originalData.basePrice;
-        let discount = 0;
-        if (newQuantity >= 500) discount = 0.20; else if (newQuantity >= 300) discount = 0.15; else if (newQuantity >= 100) discount = 0.10; else if (newQuantity >= 50) discount = 0.03;
-        const originalData = p.originalData as CA_SKU;
-        if (originalData.modelo === 'HORMIGÓN A LA VISTA TABLEADO') discount = Math.min(discount, 0.10);
-        finalPrice = basePrice * (1 - discount);
-      }
-      return { ...p, quantity: Math.max(0, newQuantity), currentPrice: finalPrice };
+      // Ya no recalcula el precio basado en la cantidad. 
+      // Mantiene el precio actual (p.currentPrice) y solo actualiza la cantidad.
+      return { ...p, quantity: Math.max(0, newQuantity) };
     }));
   };
+  // --------------------------------------------------------------------------
 
   const handleDeleteProduct = (code: string) => {
     setQuoteProducts(quoteProducts.filter(p => p.code !== code));
@@ -134,7 +124,7 @@ export default function CotizadorPage() {
 
       if (result.status === 'success') {
         alert(`¡Cotización N° ${result.quoteNumber} registrada y generada con éxito!`);
-        setGeneratedPdfUrl(result.pdfUrl);
+        window.open(result.pdfUrl, '_blank');
       } else {
         console.error("Server error details:", result);
         throw new Error(result.message || 'Error desconocido del servidor.');
@@ -177,28 +167,12 @@ export default function CotizadorPage() {
       <hr className="border-slate-600 my-10" />
       {selectedPDV && (
         <div className="mb-10 flex flex-col md:flex-row gap-4">
-          <button onClick={() => setModalType('PyM')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto NatStone</button>
-          <button onClick={() => setModalType('CA')} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto Piettra</button>
+          <button onClick={() => setModalType('PyM')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto PyM</button>
+          <button onClick={() => setModalType('CA')} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto CA</button>
         </div>
       )}
       <ProductTable {...{products: quoteProducts, onQuantityChange: handleQuantityChange, onPriceChange: handlePriceChange, onDelete: handleDeleteProduct}} />
       <QuoteTotals {...{subtotal, iva, total, isGenerating, isClientSelected: !!selectedPDV, onGenerateQuote: handleGenerateQuote}} />
-      {/* AÑADE ESTE BLOQUE DE CÓDIGO */}
-      {generatedPdfUrl && (
-        <div className="flex justify-center md:justify-end mt-4">
-          <div className="w-full md:w-2/5 lg:w-1/3 text-center bg-green-800 p-4 rounded-lg border border-green-600">
-            <h3 className="font-bold text-lg mb-2">¡Cotización Generada con éxito!</h3>
-            <a
-              href={generatedPdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-green-500 hover:bg-green-400 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
-            >
-              DESCARGAR COTIZACIÓN
-            </a>
-          </div>
-        </div>
-      )}
       {modalType && <ProductModal {...{modalType, onClose: () => setModalType(null), allPyMProducts, allCA_SKUs, onSelectProduct: handleSelectProduct}} />}
     </main>
   );
