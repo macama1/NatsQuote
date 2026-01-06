@@ -1,18 +1,20 @@
 import { QuoteProduct } from '@/types';
 import { useState, useEffect } from 'react';
 
-// Componente para el input de cantidad (se mantiene igual)
+// Nuevo componente para el input de cantidad, con estado local
 const QuantityInput = ({ product, onQuantityChange }: { product: QuoteProduct; onQuantityChange: (code: string, newQuantity: number) => void; }) => {
   const [inputValue, setInputValue] = useState(product.quantity.toString().replace('.', ','));
 
   useEffect(() => {
+    // Sincroniza el input si el valor cambia desde fuera (ej. descuentos automáticos)
     setInputValue(product.quantity.toString().replace('.', ','));
   }, [product.quantity]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setInputValue(value); 
+    setInputValue(value); // Permite escribir libremente, incluyendo la coma
 
+    // Solo actualiza el estado global si es un número válido
     const numericValue = parseFloat(value.replace(',', '.'));
     if (!isNaN(numericValue)) {
       onQuantityChange(product.code, numericValue);
@@ -22,6 +24,7 @@ const QuantityInput = ({ product, onQuantityChange }: { product: QuoteProduct; o
   };
   
   const handleBlur = () => {
+    // Al salir del campo, formatea el número a un estado consistente
     const numericValue = parseFloat(inputValue.replace(',', '.'));
      if (isNaN(numericValue) || numericValue <= 0) {
         setInputValue('0');
@@ -79,9 +82,8 @@ export default function ProductTable({
               <tr key={p.code} className="border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50">
                 <td className="p-3 font-mono">{p.code}</td>
                 <td className="p-3">{p.description}</td>
-                
-                {/* --- SECCIÓN MODIFICADA: PRECIO SIEMPRE EDITABLE --- */}
                 <td className="p-3 text-right">
+                  {p.linea === 'PyM' ? (
                     <div className="flex items-center justify-end gap-1">
                       <span>$</span>
                       <input 
@@ -91,9 +93,10 @@ export default function ProductTable({
                         className="w-28 p-1 text-right bg-slate-700 rounded border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
                       />
                     </div>
+                  ) : (
+                    `$${p.currentPrice.toLocaleString('es-CL')}`
+                  )}
                 </td>
-                {/* --------------------------------------------------- */}
-
                 <td className="p-3 text-center">
                   <QuantityInput product={p} onQuantityChange={onQuantityChange} />
                 </td>
