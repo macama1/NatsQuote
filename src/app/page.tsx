@@ -79,24 +79,37 @@ export default function CotizadorPage() {
     setQuoteProducts(quoteProducts.map(p => p.code === code ? { ...p, currentPrice: newPrice } : p));
   };
   
-  // --- FUNCIÓN MODIFICADA: Se eliminó el cálculo de descuentos automáticos ---
   const handleQuantityChange = (code: string, newQuantity: number) => {
     setQuoteProducts(quoteProducts.map(p => {
       if (p.code !== code) return p;
-      // Ya no recalcula el precio basado en la cantidad. 
-      // Mantiene el precio actual (p.currentPrice) y solo actualiza la cantidad.
       return { ...p, quantity: Math.max(0, newQuantity) };
     }));
   };
-  // --------------------------------------------------------------------------
 
   const handleDeleteProduct = (code: string) => {
     setQuoteProducts(quoteProducts.filter(p => p.code !== code));
   };
 
+  // --- FUNCIÓN ACTUALIZADA: VISUALIZACIÓN + DESCARGA ---
   const handleGenerateQuote = async () => { 
     if (!selectedPDV) { alert("Por favor, seleccione una Empresa y una Obra/PDV."); return; }
     if (quoteProducts.length === 0) { alert("Por favor, agregue al menos un producto."); return; }
+    
+    // Abrimos ventana de carga
+    const pdfWindow = window.open('', '_blank');
+    if (pdfWindow) {
+        pdfWindow.document.write(`
+          <html>
+            <head><title>Generando Cotización...</title></head>
+            <body style="font-family:sans-serif;text-align:center;padding:50px;background-color:#f1f5f9;color:#0f172a;">
+              <h2>Generando documento PDF...</h2>
+              <p>Por favor espera, estamos procesando tu cotización.</p>
+              <div style="font-size: 40px; margin-top:20px;">📄</div>
+            </body>
+          </html>
+        `);
+    }
+
     setIsGenerating(true);
 
     try {
@@ -123,13 +136,37 @@ export default function CotizadorPage() {
       const result = await response.json();
 
       if (result.status === 'success') {
-        alert(`¡Cotización N° ${result.quoteNumber} registrada y generada con éxito!`);
-        window.open(result.pdfUrl, '_blank');
+        const downloadUrl = result.pdfUrl; // Link directo de descarga (export=download)
+
+        // 1. GESTIONAR LA VISUALIZACIÓN (En la ventana nueva)
+        if (pdfWindow) {
+            const fileIdMatch = downloadUrl.match(/id=([a-zA-Z0-9_-]+)/);
+            if (fileIdMatch && fileIdMatch[1]) {
+                const previewUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+                pdfWindow.location.href = previewUrl;
+            } else {
+                pdfWindow.location.href = downloadUrl;
+            }
+        }
+
+        // 2. GESTIONAR LA DESCARGA (En segundo plano)
+        // Creamos un link invisible temporal y le damos clic para forzar la descarga
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `Cotizacion_${result.quoteNumber}.pdf`; 
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, 800); // Pequeño retraso para asegurar que el navegador procese ambas acciones
+
       } else {
+        pdfWindow?.close();
         console.error("Server error details:", result);
         throw new Error(result.message || 'Error desconocido del servidor.');
       }
     } catch (error: unknown) {
+      pdfWindow?.close();
       let errorMessage = 'Hubo un problema al generar la cotización.';
       if (error instanceof Error) {
         errorMessage += `: ${error.message}`;
