@@ -12,9 +12,9 @@
     "googleapis": "^159.0.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
-    "next": "15.5.3",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "next": "^16.1.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-select": "^5.10.2"
   },
   "devDependencies": {
