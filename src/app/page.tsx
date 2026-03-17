@@ -90,24 +90,13 @@ export default function CotizadorPage() {
     setQuoteProducts(quoteProducts.filter(p => p.code !== code));
   };
 
-  // --- FUNCIÓN ACTUALIZADA: VISUALIZACIÓN + DESCARGA ---
   const handleGenerateQuote = async () => { 
     if (!selectedPDV) { alert("Por favor, seleccione una Empresa y una Obra/PDV."); return; }
     if (quoteProducts.length === 0) { alert("Por favor, agregue al menos un producto."); return; }
     
-    // Abrimos ventana de carga
     const pdfWindow = window.open('', '_blank');
     if (pdfWindow) {
-        pdfWindow.document.write(`
-          <html>
-            <head><title>Generando Cotización...</title></head>
-            <body style="font-family:sans-serif;text-align:center;padding:50px;background-color:#f1f5f9;color:#0f172a;">
-              <h2>Generando documento PDF...</h2>
-              <p>Por favor espera, estamos procesando tu cotización.</p>
-              <div style="font-size: 40px; margin-top:20px;">📄</div>
-            </body>
-          </html>
-        `);
+        pdfWindow.document.write('<html><body style="font-family:sans-serif;text-align:center;padding:50px;"><h2>Generando PDF...</h2><p>Espera un momento por favor.</p></body></html>');
     }
 
     setIsGenerating(true);
@@ -127,31 +116,29 @@ export default function CotizadorPage() {
         bankInfo: bankData.length > 0 ? bankData[0] : {}
       };
 
+      // CORRECCIÓN AQUÍ: Quitamos no-cors y usamos modo normal
       const response = await fetch(API_URL, {
-        method: 'POST', redirect: "follow",
-        mode: 'no-cors',
+        method: 'POST',
+        mode: 'cors', 
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(quoteData)
       });
       
-      const result = await response.json();
+      const responseText = await response.text();
+      const result = JSON.parse(responseText);
 
       if (result.status === 'success') {
-        const downloadUrl = result.pdfUrl; // Link directo de descarga (export=download)
+        const downloadUrl = result.pdfUrl;
 
-        // 1. GESTIONAR LA VISUALIZACIÓN (En la ventana nueva)
         if (pdfWindow) {
             const fileIdMatch = downloadUrl.match(/id=([a-zA-Z0-9_-]+)/);
-            if (fileIdMatch && fileIdMatch[1]) {
-                const previewUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-                pdfWindow.location.href = previewUrl;
+            if (fileIdMatch) {
+                pdfWindow.location.href = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
             } else {
                 pdfWindow.location.href = downloadUrl;
             }
         }
 
-        // 2. GESTIONAR LA DESCARGA (En segundo plano)
-        // Creamos un link invisible temporal y le damos clic para forzar la descarga
         setTimeout(() => {
             const link = document.createElement('a');
             link.href = downloadUrl;
@@ -159,20 +146,14 @@ export default function CotizadorPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }, 800); // Pequeño retraso para asegurar que el navegador procese ambas acciones
+        }, 1000);
 
       } else {
-        pdfWindow?.close();
-        console.error("Server error details:", result);
-        throw new Error(result.message || 'Error desconocido del servidor.');
+        throw new Error(result.message || 'Error del servidor');
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       pdfWindow?.close();
-      let errorMessage = 'Hubo un problema al generar la cotización.';
-      if (error instanceof Error) {
-        errorMessage += `: ${error.message}`;
-      }
-      alert(errorMessage);
+      alert("Error al generar cotización: " + error.message);
     } finally {
       setIsGenerating(false);
     }
@@ -209,9 +190,9 @@ export default function CotizadorPage() {
           <button onClick={() => setModalType('CA')} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto CA</button>
         </div>
       )}
-      <ProductTable {...{products: quoteProducts, onQuantityChange: handleQuantityChange, onPriceChange: handlePriceChange, onDelete: handleDeleteProduct}} />
-      <QuoteTotals {...{subtotal, iva, total, isGenerating, isClientSelected: !!selectedPDV, onGenerateQuote: handleGenerateQuote}} />
-      {modalType && <ProductModal {...{modalType, onClose: () => setModalType(null), allPyMProducts, allCA_SKUs, onSelectProduct: handleSelectProduct}} />}
+      <ProductTable products={quoteProducts} onQuantityChange={handleQuantityChange} onPriceChange={handlePriceChange} onDelete={handleDeleteProduct} />
+      <QuoteTotals subtotal={subtotal} iva={iva} total={total} isGenerating={isGenerating} isClientSelected={!!selectedPDV} onGenerateQuote={handleGenerateQuote} />
+      {modalType && <ProductModal modalType={modalType} onClose={() => setModalType(null)} allPyMProducts={allPyMProducts} allCA_SKUs={allCA_SKUs} onSelectProduct={handleSelectProduct} />}
     </main>
   );
 }
