@@ -13,7 +13,7 @@ import QuoteTotals from '@/components/QuoteTotals';
 import ProductModal from '@/components/ProductModal';
 import ClientOnly from '@/components/ClientOnly';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwg3jS0LHNTnP7F7RIx7fO0QF0t5cdxAKKxNypHYzcEnpgpvkUmeM1FojAAjIYp0QY5Pg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyxd8jZhYGbJJRh2dkWa4e8kvHE1NsO9zf9HnvASPOog2d3y5QIsyPkt-t-fl8FaT6bKQ/exec';
 
 export default function CotizadorPage() {
   const [formaDePago, setFormaDePago] = useState('Contado');
