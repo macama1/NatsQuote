@@ -1,8 +1,5 @@
-// src/components/ClientSelector.tsx
-
 'use client';
 import { useMemo } from 'react';
-// CORRECCIÓN: Se importa MultiValue para usarlo en los tipos de las props
 import Select, { StylesConfig, SingleValue, MultiValue } from 'react-select';
 import { ClientEntry, SelectOption } from '@/types';
 
@@ -10,7 +7,6 @@ type ClientSelectorProps = {
   allClientEntries: ClientEntry[];
   selectedCompany: SelectOption | null;
   selectedPDV: ClientEntry | null;
-  // CORRECCIÓN: Se actualizan los tipos de las props para que acepten ambos valores
   onSelectCompany: (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => void;
   onSelectPDV: (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => void;
   formaDePago: string;
@@ -21,13 +17,16 @@ type ClientSelectorProps = {
   setEditableRut: (value: string) => void;
   editableDireccion: string;
   setEditableDireccion: (value: string) => void;
+  editableComuna: string; // <-- NUEVO
+  setEditableComuna: (value: string) => void; // <-- NUEVO
 };
 
 export default function ClientSelector({
   allClientEntries, selectedCompany, selectedPDV,
   onSelectCompany, onSelectPDV,
   formaDePago, setFormaDePago, formaDeEntrega, setFormaDeEntrega,
-  editableRut, setEditableRut, editableDireccion, setEditableDireccion
+  editableRut, setEditableRut, editableDireccion, setEditableDireccion,
+  editableComuna, setEditableComuna // <-- NUEVO
 }: ClientSelectorProps) {
   
   const companyOptions: SelectOption[] = useMemo(() => 
@@ -59,7 +58,6 @@ export default function ClientSelector({
       </div>
       <div>
         <label className="block mb-2 font-semibold">1. Seleccione Empresa</label>
-        {/* Ahora esta línea es válida porque onSelectCompany acepta el tipo correcto */}
         <Select instanceId="company-select" options={companyOptions} value={selectedCompany} onChange={onSelectCompany} styles={customSelectStyles} placeholder="Buscar empresa..." isClearable />
       </div>
       
@@ -72,7 +70,6 @@ export default function ClientSelector({
       </div>
       <div>
         <label className="block mb-2 font-semibold">2. Seleccione Obra/PDV</label>
-        {/* Y esta línea también es válida ahora */}
         <Select instanceId="pdv-select" options={pdvOptions} value={pdvOptions.find(opt => opt.value === selectedPDV?.id) || null} onChange={onSelectPDV} styles={customSelectStyles} isDisabled={!selectedCompany} placeholder={selectedCompany ? "Buscar obra..." : "Seleccione una empresa primero"} isClearable />
       </div>
 
@@ -86,10 +83,17 @@ export default function ClientSelector({
         <input type="text" value={editableDireccion} onChange={e => setEditableDireccion(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600" />
       </div>
 
-      {/* FILA 4 (SIEMPRE VISIBLE) */}
+      {/* FILA 4 (NUEVO INPUT DE COMUNA) */}
+      <div>
+        <label className="block mb-2 font-semibold">Comuna</label>
+        <input type="text" value={editableComuna} onChange={e => setEditableComuna(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600" />
+      </div>
+      <div className="hidden md:block"></div> {/* Div vacío para que el botón de abajo no se descuadre en la grilla */}
+
+      {/* FILA 5 (SIEMPRE VISIBLE) */}
       <div className="md:col-span-2 pt-2">
          <a href="https://obras-gamma.vercel.app/" target="_blank" rel="noopener noreferrer" className="w-full block bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2.5 px-4 rounded text-center transition-transform duration-200 hover:scale-105">
-           Al presionar este botón, será dirigido al "Radar", para crear el Punto de Venta
+           Crear PDV
          </a>
       </div>
     </div>
