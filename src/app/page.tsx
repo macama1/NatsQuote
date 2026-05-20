@@ -1,3 +1,5 @@
+// src/app/page.tsx
+
 'use client';
 import { useState, useEffect } from 'react';
 import { SingleValue, MultiValue } from 'react-select'; 
@@ -22,7 +24,6 @@ export default function CotizadorPage() {
   
   const [editableRut, setEditableRut] = useState('');
   const [editableDireccion, setEditableDireccion] = useState('');
-  const [editableComuna, setEditableComuna] = useState(''); // <-- NUEVO
   
   const [modalType, setModalType] = useState<'PyM' | 'CA' | null>(null);
   const [allPyMProducts, setAllPyMProducts] = useState<PyMProduct[]>([]);
@@ -47,7 +48,6 @@ export default function CotizadorPage() {
     setSelectedPDV(null);
     setEditableRut('');
     setEditableDireccion('');
-    setEditableComuna(''); // <-- NUEVO
   };
 
   const handleSelectPDV = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
@@ -57,8 +57,6 @@ export default function CotizadorPage() {
     if (fullPdvData) {
       setEditableRut(fullPdvData.rut || '');
       setEditableDireccion(fullPdvData.direccion || '');
-      // Usamos (fullPdvData as any) por si aún no agregas 'comuna' a la interface ClientEntry en '@/types'
-      setEditableComuna((fullPdvData as any).comuna || ''); // <-- NUEVO
     }
   };
 
@@ -107,11 +105,7 @@ export default function CotizadorPage() {
       const sellerContact = sellerContacts[selectedPDV.vendedor.trim()] || { email: '', phone: '' };
       const quoteData = {
         selectedPDV,
-        editableClientData: { 
-          rut: editableRut, 
-          direccion: editableDireccion,
-          comuna: editableComuna // <-- NUEVO
-        },
+        editableClientData: { rut: editableRut, direccion: editableDireccion },
         quoteProducts: quoteProducts.map(p => ({
             code: p.code, description: p.description, quantity: p.quantity,
             currentPrice: p.currentPrice, basePrice: p.originalData.basePrice
@@ -122,6 +116,7 @@ export default function CotizadorPage() {
         bankInfo: bankData.length > 0 ? bankData[0] : {}
       };
 
+      // CORRECCIÓN AQUÍ: Quitamos no-cors y usamos modo normal
       const response = await fetch(API_URL, {
         method: 'POST',
         mode: 'cors', 
@@ -186,8 +181,6 @@ export default function CotizadorPage() {
           setEditableRut={setEditableRut}
           editableDireccion={editableDireccion}
           setEditableDireccion={setEditableDireccion}
-          editableComuna={editableComuna} // <-- NUEVO
-          setEditableComuna={setEditableComuna} // <-- NUEVO
         />
       </ClientOnly>
       <hr className="border-slate-600 my-10" />
