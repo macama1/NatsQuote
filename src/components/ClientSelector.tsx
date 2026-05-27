@@ -93,7 +93,7 @@ export default function ClientSelector({
       {/* FILA 5 (SIEMPRE VISIBLE) */}
       <div className="md:col-span-2 pt-2">
          <a href="https://obras-gamma.vercel.app/" target="_blank" rel="noopener noreferrer" className="w-full block bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2.5 px-4 rounded text-center transition-transform duration-200 hover:scale-105">
-           Crear PDV
+           Crear Punto de Venta (Radar Comercial)
          </a>
       </div>
     </div>
