@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { SingleValue, MultiValue } from 'react-select'; 
+import Link from 'next/link'; // <-- NUEVO: Importamos el componente Link para navegar sin recargar
 
 // Importa los componentes y los tipos
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption, BankInfo, SellerContacts } from '@/types';
@@ -22,7 +23,7 @@ export default function CotizadorPage() {
   
   const [editableRut, setEditableRut] = useState('');
   const [editableDireccion, setEditableDireccion] = useState('');
-  const [editableComuna, setEditableComuna] = useState(''); // <-- NUEVO
+  const [editableComuna, setEditableComuna] = useState(''); 
   
   const [modalType, setModalType] = useState<'PyM' | 'CA' | null>(null);
   const [allPyMProducts, setAllPyMProducts] = useState<PyMProduct[]>([]);
@@ -47,7 +48,7 @@ export default function CotizadorPage() {
     setSelectedPDV(null);
     setEditableRut('');
     setEditableDireccion('');
-    setEditableComuna(''); // <-- NUEVO
+    setEditableComuna(''); 
   };
 
   const handleSelectPDV = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
@@ -58,7 +59,7 @@ export default function CotizadorPage() {
       setEditableRut(fullPdvData.rut || '');
       setEditableDireccion(fullPdvData.direccion || '');
       // Usamos (fullPdvData as any) por si aún no agregas 'comuna' a la interface ClientEntry en '@/types'
-      setEditableComuna((fullPdvData as any).comuna || ''); // <-- NUEVO
+      setEditableComuna((fullPdvData as any).comuna || ''); 
     }
   };
 
@@ -110,7 +111,7 @@ export default function CotizadorPage() {
         editableClientData: { 
           rut: editableRut, 
           direccion: editableDireccion,
-          comuna: editableComuna // <-- NUEVO
+          comuna: editableComuna 
         },
         quoteProducts: quoteProducts.map(p => ({
             code: p.code, description: p.description, quantity: p.quantity,
@@ -170,7 +171,19 @@ export default function CotizadorPage() {
 
   return (
     <main className="p-4 md:p-10 bg-slate-800 text-white min-h-screen">
-      <QuoteHeader />
+      
+      {/* <-- NUEVO: Contenedor para el Header y el Botón de Recuperar --> */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
+        <QuoteHeader />
+        
+        <Link 
+          href="/recuperar" 
+          className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 border border-orange-500 text-orange-400 font-bold py-2 px-4 rounded shadow-md transition-colors"
+        >
+          <span>🔄 Ir a Recuperar Cotización</span>
+        </Link>
+      </div>
+
       <ClientOnly>
         <ClientSelector
           allClientEntries={allClientEntries}
@@ -186,8 +199,8 @@ export default function CotizadorPage() {
           setEditableRut={setEditableRut}
           editableDireccion={editableDireccion}
           setEditableDireccion={setEditableDireccion}
-          editableComuna={editableComuna} // <-- NUEVO
-          setEditableComuna={setEditableComuna} // <-- NUEVO
+          editableComuna={editableComuna} 
+          setEditableComuna={setEditableComuna} 
         />
       </ClientOnly>
       <hr className="border-slate-600 my-10" />
