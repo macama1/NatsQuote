@@ -9,6 +9,7 @@ import QuoteTotals from '@/components/QuoteTotals';
 import ProductModal from '@/components/ProductModal';
 import ClientOnly from '@/components/ClientOnly';
 
+// Revisa que esta URL sea exactamente la de tu AppScript activa
 const API_URL = 'https://script.google.com/macros/s/AKfycbyxd8jZhYGbJJRh2dkWa4e8kvHE1NsO9zf9HnvASPOog2d3y5QIsyPkt-t-fl8FaT6bKQ/exec';
 
 export default function RecuperarCotizacionPage() {
@@ -34,16 +35,44 @@ export default function RecuperarCotizacionPage() {
   const [searchId, setSearchId] = useState('');
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   
-  const fetchData = () => {
-    fetch(`${API_URL}`).then(res => res.json()).then(setAllClientEntries).catch(err => console.error(err));
-    fetch(`${API_URL}?action=getProducts`).then(res => res.json()).then(setAllPyMProducts).catch(err => console.error(err));
-    fetch(`${API_URL}?action=getCA_SKUs`).then(res => res.json()).then(setAllCA_SKUs).catch(err => console.error(err));
-    fetch(`${API_URL}?action=getBankData`).then(res => res.json()).then(setBankData).catch(err => console.error(err));
-    fetch(`${API_URL}?action=getSellerContacts`).then(res => res.json()).then(setSellerContacts).catch(err => console.error(err));
-  };
-  useEffect(fetchData, []);
+  // SOLUCIÓN CRÍTICA: Peticiones en orden (fila india) para no saturar Google Apps Script
+  const fetchData = async () => {
+    try {
+      // 1. Cargar Clientes
+      const resClients = await fetch(`${API_URL}`);
+      const dataClients = await resClients.json();
+      setAllClientEntries(dataClients);
 
-  // LOGICA PARA IR A BUSCAR LA COTIZACIÓN VIEJA
+      // 2. Cargar Productos PyM
+      const resProducts = await fetch(`${API_URL}?action=getProducts`);
+      const dataProducts = await resProducts.json();
+      setAllPyMProducts(dataProducts);
+
+      // 3. Cargar SKUs CA
+      const resCA = await fetch(`${API_URL}?action=getCA_SKUs`);
+      const dataCA = await resCA.json();
+      setAllCA_SKUs(dataCA);
+
+      // 4. Cargar Datos Banco
+      const resBank = await fetch(`${API_URL}?action=getBankData`);
+      const dataBank = await resBank.json();
+      setBankData(dataBank);
+
+      // 5. Cargar Contactos Vendedor
+      const resContacts = await fetch(`${API_URL}?action=getSellerContacts`);
+      const dataContacts = await resContacts.json();
+      setSellerContacts(dataContacts);
+
+    } catch (err) {
+      console.error("Error cargando los datos secuencialmente:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // LÓGICA PARA IR A BUSCAR LA COTIZACIÓN VIEJA
   const handleLoadQuote = async () => {
     if (!searchId) return;
     setIsLoadingQuote(true);
