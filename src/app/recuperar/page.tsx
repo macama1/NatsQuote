@@ -9,10 +9,12 @@ import QuoteTotals from '@/components/QuoteTotals';
 import ProductModal from '@/components/ProductModal';
 import ClientOnly from '@/components/ClientOnly';
 
-// Revisa que esta URL sea exactamente la de tu AppScript activa
+// Asegúrate de revisar que esta URL sea exactamente la de tu AppScript activa
 const API_URL = 'https://script.google.com/macros/s/AKfycbyxd8jZhYGbJJRh2dkWa4e8kvHE1NsO9zf9HnvASPOog2d3y5QIsyPkt-t-fl8FaT6bKQ/exec';
 
 export default function RecuperarCotizacionPage() {
+  const [isMounted, setIsMounted] = useState(false);
+
   const [formaDePago, setFormaDePago] = useState('Contado');
   const [formaDeEntrega, setFormaDeEntrega] = useState('Retiro en planta');
   const [allClientEntries, setAllClientEntries] = useState<ClientEntry[]>([]);
@@ -31,48 +33,42 @@ export default function RecuperarCotizacionPage() {
   const [bankData, setBankData] = useState<BankInfo[]>([]);
   const [sellerContacts, setSellerContacts] = useState<SellerContacts>({});
 
-  // ESTADOS PARA LA BÚSQUEDA
   const [searchId, setSearchId] = useState('');
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   
-  // SOLUCIÓN CRÍTICA: Peticiones en orden (fila india) para no saturar Google Apps Script
+  // Carga secuencial anti-saturación de Google Apps Script
   const fetchData = async () => {
     try {
-      // 1. Cargar Clientes
       const resClients = await fetch(`${API_URL}`);
       const dataClients = await resClients.json();
       setAllClientEntries(dataClients);
 
-      // 2. Cargar Productos PyM
       const resProducts = await fetch(`${API_URL}?action=getProducts`);
       const dataProducts = await resProducts.json();
       setAllPyMProducts(dataProducts);
 
-      // 3. Cargar SKUs CA
       const resCA = await fetch(`${API_URL}?action=getCA_SKUs`);
       const dataCA = await resCA.json();
       setAllCA_SKUs(dataCA);
 
-      // 4. Cargar Datos Banco
       const resBank = await fetch(`${API_URL}?action=getBankData`);
       const dataBank = await resBank.json();
       setBankData(dataBank);
 
-      // 5. Cargar Contactos Vendedor
       const resContacts = await fetch(`${API_URL}?action=getSellerContacts`);
       const dataContacts = await resContacts.json();
       setSellerContacts(dataContacts);
 
     } catch (err) {
-      console.error("Error cargando los datos secuencialmente:", err);
+      console.error("Error de red cargando datos:", err);
     }
   };
 
   useEffect(() => {
+    setIsMounted(true);
     fetchData();
   }, []);
 
-  // LÓGICA PARA IR A BUSCAR LA COTIZACIÓN VIEJA
   const handleLoadQuote = async () => {
     if (!searchId) return;
     setIsLoadingQuote(true);
@@ -85,7 +81,6 @@ export default function RecuperarCotizacionPage() {
         return;
       }
 
-      // Inyectamos los datos viejos en el estado de la pantalla actual
       setSelectedCompany({ value: data.selectedPDV.empresa, label: data.selectedPDV.empresa });
       setSelectedPDV(data.selectedPDV);
       setEditableRut(data.editableClientData?.rut || '');
@@ -150,7 +145,13 @@ export default function RecuperarCotizacionPage() {
       const quoteData = {
         selectedPDV,
         editableClientData: { rut: editableRut, direccion: editableDireccion, comuna: editableComuna },
-        quoteProducts: quoteProducts.map(p => ({ code: p.code, description: p.description, quantity: p.quantity, currentPrice: p.currentPrice, basePrice: p.originalData.basePrice })),
+        quoteProducts: quoteProducts.map(p => ({ 
+          code: p.code, 
+          description: p.description, 
+          quantity: p.quantity, 
+          currentPrice: p.currentPrice, 
+          basePrice: p.originalData?.basePrice || (p as any).basePrice || p.currentPrice // Solución anti-crasheos
+        })),
         sellerContact: sellerContacts[selectedPDV.vendedor.trim()] || { email: '', phone: '' },
         subtotal, iva, total, paymentMethod: formaDePago, deliveryMethod: formaDeEntrega,
         bankInfo: bankData.length > 0 ? bankData[0] : {}
@@ -181,14 +182,14 @@ export default function RecuperarCotizacionPage() {
   const iva = subtotal * 0.19;
   const total = subtotal + iva;
 
+  if (!isMounted) return null;
+
   return (
-    <main className="p-4 md:p-10 bg-slate-800 text-white min-h-screen border-t-8 border-orange-500">
-      
-      {/* HEADER VISUAL DIFERENCIADO */}
+    <main suppressHydrationWarning className="p-4 md:p-10 bg-slate-800 text-white min-h-screen border-t-8 border-orange-500">
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
         <QuoteHeader />
         <div className="flex items-center gap-2 bg-slate-700 p-3 rounded-lg border border-orange-500 shadow-md w-full md:w-auto">
-          <span className="font-bold text-orange-400 whitespace-nowrap">Recuperar N°:</span>
+          <span className="font-bold text-orange-400 whitespace-nowrap">Recuperar:</span>
           <input 
             type="number" 
             placeholder="Ej. 145" 
