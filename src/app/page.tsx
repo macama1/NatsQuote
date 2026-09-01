@@ -59,7 +59,7 @@ export default function CotizadorPage() {
       setEditableRut(fullPdvData.rut || '');
       setEditableDireccion(fullPdvData.direccion || '');
       // Usamos (fullPdvData as any) por si aún no agregas 'comuna' a la interface ClientEntry en '@/types'
-      setEditableComuna((fullPdvData as any).comuna || ''); 
+      setEditableComuna(fullPdvData.comuna || ''); 
     }
   };
 
