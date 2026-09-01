@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SingleValue, MultiValue } from 'react-select';
 import Link from 'next/link';
 
@@ -22,6 +22,7 @@ export default function CotizadorPage() {
   // <-- NUEVO: modo de cotización genérica (empresa escrita a mano, sin PDV)
   const [isGenericMode, setIsGenericMode] = useState(false);
   const [genericEmpresaName, setGenericEmpresaName] = useState('');
+  const [genericVendedor, setGenericVendedor] = useState('');
 
   const [modalType, setModalType] = useState<'PyM' | 'CA' | null>(null);
   const [allPyMProducts, setAllPyMProducts] = useState<PyMProduct[]>([]);
@@ -89,20 +90,26 @@ export default function CotizadorPage() {
     setSelectedCompany(null);
     setSelectedPDV(null);
     setGenericEmpresaName('');
+    setGenericVendedor('');
     setEditableRut('');
     setEditableDireccion('');
     setEditableComuna('');
   };
 
+  // <-- NUEVO: lista de vendedores únicos (para el select en modo genérico)
+  const vendedorOptions = useMemo(() =>
+    [...new Set((allClientEntries || []).map(c => c.vendedor).filter(Boolean))].sort()
+  , [allClientEntries]);
+
   // <-- NUEVO: "cliente efectivo" para la cotización, ya sea el PDV seleccionado
-  // o uno sintético armado a partir del nombre escrito a mano en modo genérico
+  // o uno sintético armado a partir del nombre y vendedor escritos/elegidos en modo genérico
   const effectivePDV: ClientEntry | null = isGenericMode
-    ? (genericEmpresaName.trim()
+    ? (genericEmpresaName.trim() && genericVendedor.trim()
         ? {
             id: 'GENERICO',
             empresa: genericEmpresaName.trim(),
             obraPDV: 'Cotización Genérica',
-            vendedor: '',
+            vendedor: genericVendedor.trim(),
             direccion: editableDireccion,
             comuna: editableComuna,
             region: '',
@@ -144,7 +151,7 @@ export default function CotizadorPage() {
   const handleGenerateQuote = async () => {
     if (!effectivePDV) {
       alert(isGenericMode
-        ? "Por favor, escriba el nombre de la empresa."
+        ? "Por favor, escriba el nombre de la empresa y seleccione el vendedor."
         : "Por favor, seleccione una Empresa y una Obra/PDV.");
       return;
     }
@@ -265,6 +272,9 @@ export default function CotizadorPage() {
           onToggleGenericMode={handleToggleGenericMode}
           genericEmpresaName={genericEmpresaName}
           setGenericEmpresaName={setGenericEmpresaName}
+          vendedorOptions={vendedorOptions}
+          genericVendedor={genericVendedor}
+          setGenericVendedor={setGenericVendedor}
         />
       </ClientOnly>
       <hr className="border-slate-600 my-10" />
