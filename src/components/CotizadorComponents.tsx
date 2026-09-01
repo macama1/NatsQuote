@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Select, { StylesConfig, SingleValue, MultiValue } from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import Image from 'next/image';
 
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption } from '@/types';
@@ -107,6 +108,12 @@ export function ClientSelector({
     (allClientEntries || []).filter(c => c.empresa === selectedCompany?.value).map(pdv => ({ value: pdv.id, label: pdv.obraPDV }))
   , [allClientEntries, selectedCompany]);
 
+  // <-- NUEVO: texto que se está escribiendo en el combo de empresa (modo genérico)
+  const [genericEmpresaInput, setGenericEmpresaInput] = useState(genericEmpresaName);
+  useEffect(() => {
+    setGenericEmpresaInput(genericEmpresaName);
+  }, [genericEmpresaName]);
+
   const customSelectStyles: StylesConfig<SelectOption> = {
     control: (provided) => ({ ...provided, backgroundColor: '#334155', borderColor: '#475569', color: 'white', minHeight: '42px' }),
     singleValue: (provided) => ({ ...provided, color: 'white' }),
@@ -145,12 +152,23 @@ export function ClientSelector({
       {isGenericMode ? (
         <div>
           <label className="block mb-2 font-semibold">1. Nombre de la Empresa</label>
-          <input
-            type="text"
-            value={genericEmpresaName}
-            onChange={e => setGenericEmpresaName(e.target.value)}
-            placeholder="Escriba el nombre de la empresa..."
-            className="w-full p-2.5 rounded bg-slate-700 border border-slate-600"
+          <CreatableSelect
+            instanceId="generic-empresa-select"
+            options={companyOptions}
+            value={genericEmpresaName ? { value: genericEmpresaName, label: genericEmpresaName } : null}
+            inputValue={genericEmpresaInput}
+            onInputChange={(newInput, meta) => {
+              if (meta.action === 'input-change') setGenericEmpresaInput(newInput);
+            }}
+            onChange={(newValue) => setGenericEmpresaName(newValue ? (newValue as SelectOption).value : '')}
+            onBlur={() => {
+              // Si no seleccionó nada de la lista, se queda con lo escrito tal cual
+              if (genericEmpresaInput.trim()) setGenericEmpresaName(genericEmpresaInput.trim());
+            }}
+            styles={customSelectStyles}
+            placeholder="Escriba o seleccione la empresa..."
+            formatCreateLabel={(inputValue) => `Usar "${inputValue}"`}
+            isClearable
           />
         </div>
       ) : (
