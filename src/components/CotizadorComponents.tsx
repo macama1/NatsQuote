@@ -80,6 +80,10 @@ type ClientSelectorProps = {
   setEditableDireccion: (value: string) => void;
   editableComuna: string;
   setEditableComuna: (value: string) => void;
+  isGenericMode: boolean;
+  onToggleGenericMode: (value: boolean) => void;
+  genericEmpresaName: string;
+  setGenericEmpresaName: (value: string) => void;
 };
 
 export function ClientSelector({
@@ -87,7 +91,8 @@ export function ClientSelector({
   onSelectCompany, onSelectPDV,
   formaDePago, setFormaDePago, formaDeEntrega, setFormaDeEntrega,
   editableRut, setEditableRut, editableDireccion, setEditableDireccion,
-  editableComuna, setEditableComuna
+  editableComuna, setEditableComuna,
+  isGenericMode, onToggleGenericMode, genericEmpresaName, setGenericEmpresaName
 }: ClientSelectorProps) {
 
   const companyOptions: SelectOption[] = useMemo(() =>
@@ -109,16 +114,47 @@ export function ClientSelector({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-10">
+
+      <div className="md:col-span-2 flex gap-3 mb-2">
+        <button
+          type="button"
+          onClick={() => onToggleGenericMode(false)}
+          className={`flex-1 py-2.5 px-4 rounded font-semibold border transition-colors ${!isGenericMode ? 'bg-blue-600 border-blue-500' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}
+        >
+          Cliente Registrado
+        </button>
+        <button
+          type="button"
+          onClick={() => onToggleGenericMode(true)}
+          className={`flex-1 py-2.5 px-4 rounded font-semibold border transition-colors ${isGenericMode ? 'bg-blue-600 border-blue-500' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}
+        >
+          Cotización Genérica
+        </button>
+      </div>
+
       <div>
         <label className="block mb-2 font-semibold">Forma de Pago:</label>
         <select value={formaDePago} onChange={e => setFormaDePago(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600">
           <option>Contado</option><option>Transferencia</option><option>WebPay</option><option>Orden de Compra</option>
         </select>
       </div>
-      <div>
-        <label className="block mb-2 font-semibold">1. Seleccione Empresa</label>
-        <Select instanceId="company-select" options={companyOptions} value={selectedCompany} onChange={onSelectCompany} styles={customSelectStyles} placeholder="Buscar empresa..." isClearable />
-      </div>
+      {isGenericMode ? (
+        <div>
+          <label className="block mb-2 font-semibold">1. Nombre de la Empresa</label>
+          <input
+            type="text"
+            value={genericEmpresaName}
+            onChange={e => setGenericEmpresaName(e.target.value)}
+            placeholder="Escriba el nombre de la empresa..."
+            className="w-full p-2.5 rounded bg-slate-700 border border-slate-600"
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="block mb-2 font-semibold">1. Seleccione Empresa</label>
+          <Select instanceId="company-select" options={companyOptions} value={selectedCompany} onChange={onSelectCompany} styles={customSelectStyles} placeholder="Buscar empresa..." isClearable />
+        </div>
+      )}
 
       <div>
         <label className="block mb-2 font-semibold">Forma de Entrega:</label>
@@ -126,10 +162,14 @@ export function ClientSelector({
           <option>Retiro en planta</option><option>Despacho a obra</option>
         </select>
       </div>
-      <div>
-        <label className="block mb-2 font-semibold">2. Seleccione Obra/PDV</label>
-        <Select instanceId="pdv-select" options={pdvOptions} value={pdvOptions.find(opt => opt.value === selectedPDV?.id) || null} onChange={onSelectPDV} styles={customSelectStyles} isDisabled={!selectedCompany} placeholder={selectedCompany ? "Buscar obra..." : "Seleccione una empresa primero"} isClearable />
-      </div>
+      {isGenericMode ? (
+        <div className="hidden md:block"></div>
+      ) : (
+        <div>
+          <label className="block mb-2 font-semibold">2. Seleccione Obra/PDV</label>
+          <Select instanceId="pdv-select" options={pdvOptions} value={pdvOptions.find(opt => opt.value === selectedPDV?.id) || null} onChange={onSelectPDV} styles={customSelectStyles} isDisabled={!selectedCompany} placeholder={selectedCompany ? "Buscar obra..." : "Seleccione una empresa primero"} isClearable />
+        </div>
+      )}
 
       <div>
         <label className="block mb-2 font-semibold">RUT</label>
