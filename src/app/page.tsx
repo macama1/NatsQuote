@@ -14,6 +14,22 @@ import ClientOnly from '@/components/ClientOnly';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbyxd8jZhYGbJJRh2dkWa4e8kvHE1NsO9zf9HnvASPOog2d3y5QIsyPkt-t-fl8FaT6bKQ/exec';
 
+const [loadError, setLoadError] = useState<string | null>(null);
+
+const fetchData = () => {
+  setLoadError(null);
+  fetch(`${API_URL}`).then(res => res.json()).then(setAllClientEntries)
+    .catch(err => { console.error("Error fetching clients:", err); setLoadError("No se pudieron cargar los clientes."); });
+  fetch(`${API_URL}?action=getProducts`).then(res => res.json()).then(setAllPyMProducts)
+    .catch(err => { console.error("Error fetching PyM products:", err); setLoadError("No se pudieron cargar los productos PyM."); });
+  fetch(`${API_URL}?action=getCA_SKUs`).then(res => res.json()).then(setAllCA_SKUs)
+    .catch(err => { console.error("Error fetching CA SKUs:", err); setLoadError("No se pudieron cargar los productos CA."); });
+  fetch(`${API_URL}?action=getBankData`).then(res => res.json()).then(setBankData)
+    .catch(err => console.error("Error fetching bank data:", err));
+  fetch(`${API_URL}?action=getSellerContacts`).then(res => res.json()).then(setSellerContacts)
+    .catch(err => console.error("Error fetching seller contacts:", err));
+};
+
 export default function CotizadorPage() {
   const [formaDePago, setFormaDePago] = useState('Contado');
   const [formaDeEntrega, setFormaDeEntrega] = useState('Retiro en planta');
