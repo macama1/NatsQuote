@@ -19,6 +19,10 @@ export default function CotizadorPage() {
   const [editableDireccion, setEditableDireccion] = useState('');
   const [editableComuna, setEditableComuna] = useState('');
 
+  // <-- NUEVO: modo de cotización genérica (empresa escrita a mano, sin PDV)
+  const [isGenericMode, setIsGenericMode] = useState(false);
+  const [genericEmpresaName, setGenericEmpresaName] = useState('');
+
   const [modalType, setModalType] = useState<'PyM' | 'CA' | null>(null);
   const [allPyMProducts, setAllPyMProducts] = useState<PyMProduct[]>([]);
   const [allCA_SKUs, setAllCA_SKUs] = useState<CA_SKU[]>([]);
@@ -80,6 +84,33 @@ export default function CotizadorPage() {
     }
   };
 
+  const handleToggleGenericMode = (value: boolean) => {
+    setIsGenericMode(value);
+    setSelectedCompany(null);
+    setSelectedPDV(null);
+    setGenericEmpresaName('');
+    setEditableRut('');
+    setEditableDireccion('');
+    setEditableComuna('');
+  };
+
+  // <-- NUEVO: "cliente efectivo" para la cotización, ya sea el PDV seleccionado
+  // o uno sintético armado a partir del nombre escrito a mano en modo genérico
+  const effectivePDV: ClientEntry | null = isGenericMode
+    ? (genericEmpresaName.trim()
+        ? {
+            id: 'GENERICO',
+            empresa: genericEmpresaName.trim(),
+            obraPDV: 'Cotización Genérica',
+            vendedor: '',
+            direccion: editableDireccion,
+            comuna: editableComuna,
+            region: '',
+            rut: editableRut,
+          }
+        : null)
+    : selectedPDV;
+
   const handleSelectProduct = (productData: PyMProduct | CA_SKU) => {
     if (quoteProducts.find(p => p.code === productData.code)) {
       alert("Este producto ya ha sido agregado."); return;
@@ -111,7 +142,12 @@ export default function CotizadorPage() {
   };
 
   const handleGenerateQuote = async () => {
-    if (!selectedPDV) { alert("Por favor, seleccione una Empresa y una Obra/PDV."); return; }
+    if (!effectivePDV) {
+      alert(isGenericMode
+        ? "Por favor, escriba el nombre de la empresa."
+        : "Por favor, seleccione una Empresa y una Obra/PDV.");
+      return;
+    }
     if (quoteProducts.length === 0) { alert("Por favor, agregue al menos un producto."); return; }
 
     const pdfWindow = window.open('', '_blank');
@@ -122,9 +158,9 @@ export default function CotizadorPage() {
     setIsGenerating(true);
 
     try {
-      const sellerContact = sellerContacts[selectedPDV.vendedor.trim()] || { email: '', phone: '' };
+      const sellerContact = sellerContacts[effectivePDV.vendedor.trim()] || { email: '', phone: '' };
       const quoteData = {
-        selectedPDV,
+        selectedPDV: effectivePDV,
         editableClientData: {
           rut: editableRut,
           direccion: editableDireccion,
@@ -225,17 +261,21 @@ export default function CotizadorPage() {
           setEditableDireccion={setEditableDireccion}
           editableComuna={editableComuna}
           setEditableComuna={setEditableComuna}
+          isGenericMode={isGenericMode}
+          onToggleGenericMode={handleToggleGenericMode}
+          genericEmpresaName={genericEmpresaName}
+          setGenericEmpresaName={setGenericEmpresaName}
         />
       </ClientOnly>
       <hr className="border-slate-600 my-10" />
-      {selectedPDV && (
+      {effectivePDV && (
         <div className="mb-10 flex flex-col md:flex-row gap-4">
           <button onClick={() => setModalType('PyM')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto PyM</button>
           <button onClick={() => setModalType('CA')} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-5 rounded text-lg">Agregar Producto CA</button>
         </div>
       )}
       <ProductTable products={quoteProducts} onQuantityChange={handleQuantityChange} onPriceChange={handlePriceChange} onDelete={handleDeleteProduct} />
-      <QuoteTotals subtotal={subtotal} iva={iva} total={total} isGenerating={isGenerating} isClientSelected={!!selectedPDV} onGenerateQuote={handleGenerateQuote} />
+      <QuoteTotals subtotal={subtotal} iva={iva} total={total} isGenerating={isGenerating} isClientSelected={!!effectivePDV} onGenerateQuote={handleGenerateQuote} />
       {modalType && <ProductModal modalType={modalType} onClose={() => setModalType(null)} allPyMProducts={allPyMProducts} allCA_SKUs={allCA_SKUs} onSelectProduct={handleSelectProduct} />}
     </main>
   );
