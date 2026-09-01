@@ -84,6 +84,9 @@ type ClientSelectorProps = {
   onToggleGenericMode: (value: boolean) => void;
   genericEmpresaName: string;
   setGenericEmpresaName: (value: string) => void;
+  vendedorOptions: string[];
+  genericVendedor: string;
+  setGenericVendedor: (value: string) => void;
 };
 
 export function ClientSelector({
@@ -92,7 +95,8 @@ export function ClientSelector({
   formaDePago, setFormaDePago, formaDeEntrega, setFormaDeEntrega,
   editableRut, setEditableRut, editableDireccion, setEditableDireccion,
   editableComuna, setEditableComuna,
-  isGenericMode, onToggleGenericMode, genericEmpresaName, setGenericEmpresaName
+  isGenericMode, onToggleGenericMode, genericEmpresaName, setGenericEmpresaName,
+  vendedorOptions, genericVendedor, setGenericVendedor
 }: ClientSelectorProps) {
 
   const companyOptions: SelectOption[] = useMemo(() =>
@@ -163,7 +167,17 @@ export function ClientSelector({
         </select>
       </div>
       {isGenericMode ? (
-        <div className="hidden md:block"></div>
+        <div>
+          <label className="block mb-2 font-semibold">2. Seleccione Vendedor</label>
+          <select
+            value={genericVendedor}
+            onChange={e => setGenericVendedor(e.target.value)}
+            className="w-full p-2.5 rounded bg-slate-700 border border-slate-600"
+          >
+            <option value="">-- Seleccione un vendedor --</option>
+            {vendedorOptions.map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
       ) : (
         <div>
           <label className="block mb-2 font-semibold">2. Seleccione Obra/PDV</label>
