@@ -108,12 +108,6 @@ export function ClientSelector({
     (allClientEntries || []).filter(c => c.empresa === selectedCompany?.value).map(pdv => ({ value: pdv.id, label: pdv.obraPDV }))
   , [allClientEntries, selectedCompany]);
 
-  // <-- NUEVO: texto que se está escribiendo en el combo de empresa (modo genérico)
-  const [genericEmpresaInput, setGenericEmpresaInput] = useState(genericEmpresaName);
-  useEffect(() => {
-    setGenericEmpresaInput(genericEmpresaName);
-  }, [genericEmpresaName]);
-
   const customSelectStyles: StylesConfig<SelectOption> = {
     control: (provided) => ({ ...provided, backgroundColor: '#334155', borderColor: '#475569', color: 'white', minHeight: '42px' }),
     singleValue: (provided) => ({ ...provided, color: 'white' }),
@@ -156,15 +150,7 @@ export function ClientSelector({
             instanceId="generic-empresa-select"
             options={companyOptions}
             value={genericEmpresaName ? { value: genericEmpresaName, label: genericEmpresaName } : null}
-            inputValue={genericEmpresaInput}
-            onInputChange={(newInput, meta) => {
-              if (meta.action === 'input-change') setGenericEmpresaInput(newInput);
-            }}
             onChange={(newValue) => setGenericEmpresaName(newValue ? (newValue as SelectOption).value : '')}
-            onBlur={() => {
-              // Si no seleccionó nada de la lista, se queda con lo escrito tal cual
-              if (genericEmpresaInput.trim()) setGenericEmpresaName(genericEmpresaInput.trim());
-            }}
             styles={customSelectStyles}
             placeholder="Escriba o seleccione la empresa..."
             formatCreateLabel={(inputValue) => `Usar "${inputValue}"`}
