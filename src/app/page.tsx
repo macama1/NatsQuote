@@ -8,6 +8,29 @@ import { QuoteHeader, ClientSelector, ProductTable, QuoteTotals, ProductModal, C
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbyxd8jZhYGbJJRh2dkWa4e8kvHE1NsO9zf9HnvASPOog2d3y5QIsyPkt-t-fl8FaT6bKQ/exec';
 
+// <-- NUEVO: fetch con reintentos (fallas transitorias de Apps Script no deberían bloquear la carga)
+async function fetchJsonWithRetry(url: string, retries = 2, delayMs = 1200): Promise<any> {
+  let lastError: any;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error('Respuesta no es JSON válido (posible error de permisos o script caído).');
+      }
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, delayMs * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export default function CotizadorPage() {
   const [formaDePago, setFormaDePago] = useState('Contado');
   const [formaDeEntrega, setFormaDeEntrega] = useState('Retiro en planta');
@@ -35,34 +58,39 @@ export default function CotizadorPage() {
   // <-- NUEVO: estado de error de carga, visible para el usuario
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoadError(null);
 
-    fetch(`${API_URL}`).then(res => res.json()).then(setAllClientEntries)
-      .catch(err => {
-        console.error("Error fetching clients:", err);
-        setLoadError("No se pudieron cargar los clientes.");
-      });
+    const [clientsResult, productsResult, caResult, bankResult, sellerResult] = await Promise.allSettled([
+      fetchJsonWithRetry(`${API_URL}`),
+      fetchJsonWithRetry(`${API_URL}?action=getProducts`),
+      fetchJsonWithRetry(`${API_URL}?action=getCA_SKUs`),
+      fetchJsonWithRetry(`${API_URL}?action=getBankData`),
+      fetchJsonWithRetry(`${API_URL}?action=getSellerContacts`),
+    ]);
 
-    fetch(`${API_URL}?action=getProducts`).then(res => res.json()).then(setAllPyMProducts)
-      .catch(err => {
-        console.error("Error fetching PyM products:", err);
-        setLoadError("No se pudieron cargar los productos PyM.");
-      });
+    const failed: string[] = [];
 
-    fetch(`${API_URL}?action=getCA_SKUs`).then(res => res.json()).then(setAllCA_SKUs)
-      .catch(err => {
-        console.error("Error fetching CA SKUs:", err);
-        setLoadError("No se pudieron cargar los productos CA.");
-      });
+    if (clientsResult.status === 'fulfilled') setAllClientEntries(clientsResult.value);
+    else { console.error("Error fetching clients:", clientsResult.reason); failed.push("clientes"); }
 
-    fetch(`${API_URL}?action=getBankData`).then(res => res.json()).then(setBankData)
-      .catch(err => console.error("Error fetching bank data:", err));
+    if (productsResult.status === 'fulfilled') setAllPyMProducts(productsResult.value);
+    else { console.error("Error fetching PyM products:", productsResult.reason); failed.push("productos PyM"); }
 
-    fetch(`${API_URL}?action=getSellerContacts`).then(res => res.json()).then(setSellerContacts)
-      .catch(err => console.error("Error fetching seller contacts:", err));
+    if (caResult.status === 'fulfilled') setAllCA_SKUs(caResult.value);
+    else { console.error("Error fetching CA SKUs:", caResult.reason); failed.push("productos CA"); }
+
+    if (bankResult.status === 'fulfilled') setBankData(bankResult.value);
+    else console.error("Error fetching bank data:", bankResult.reason);
+
+    if (sellerResult.status === 'fulfilled') setSellerContacts(sellerResult.value);
+    else { console.error("Error fetching seller contacts:", sellerResult.reason); failed.push("vendedores"); }
+
+    if (failed.length > 0) {
+      setLoadError(`No se pudo cargar: ${failed.join(', ')}. (Reintentado automáticamente sin éxito — revisa las Ejecuciones en Apps Script)`);
+    }
   };
-  useEffect(fetchData, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleSelectCompany = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
     const singleOption = Array.isArray(option) ? option[0] : option;
@@ -96,10 +124,11 @@ export default function CotizadorPage() {
     setEditableComuna('');
   };
 
-  // <-- NUEVO: lista de vendedores únicos (para el select en modo genérico)
+  // <-- CORREGIDO: la lista de vendedores ahora sale de "sellerContacts" (independiente
+  // de la carga de clientes), así el modo genérico sigue funcionando aunque falle getClients
   const vendedorOptions = useMemo(() =>
-    [...new Set((allClientEntries || []).map(c => c.vendedor).filter(Boolean))].sort()
-  , [allClientEntries]);
+    Object.keys(sellerContacts).sort()
+  , [sellerContacts]);
 
   // <-- NUEVO: "cliente efectivo" para la cotización, ya sea el PDV seleccionado
   // o uno sintético armado a partir del nombre y vendedor escritos/elegidos en modo genérico
@@ -191,7 +220,13 @@ export default function CotizadorPage() {
       });
 
       const responseText = await response.text();
-      const result = JSON.parse(responseText);
+      let result: any;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        console.error("Respuesta no válida del servidor:", responseText);
+        throw new Error("El servidor no respondió correctamente. Puede estar caído, sin permisos, o con una implementación desactualizada. Revisa 'Ejecuciones' en Apps Script.");
+      }
 
       if (result.status === 'success') {
         const downloadUrl = result.pdfUrl;
@@ -219,7 +254,8 @@ export default function CotizadorPage() {
       }
     } catch (error: any) {
       pdfWindow?.close();
-      alert("Error al generar cotización: " + error.message);
+      console.error("Error generando cotización:", error);
+      alert("Error al generar cotización: " + (error?.message || 'Error desconocido.'));
     } finally {
       setIsGenerating(false);
     }
