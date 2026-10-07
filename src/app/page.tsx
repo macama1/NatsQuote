@@ -58,36 +58,21 @@ export default function CotizadorPage() {
   // <-- NUEVO: estado de error de carga, visible para el usuario
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // <-- CORREGIDO: una sola llamada combinada (?action=getAll) en vez de 5 llamadas
+  // separadas. Cada llamada a Apps Script paga el costo de abrir la planilla desde
+  // cero; con 1 sola llamada ese costo se paga una vez en vez de cinco.
   const fetchData = async () => {
     setLoadError(null);
-
-    const [clientsResult, productsResult, caResult, bankResult, sellerResult] = await Promise.allSettled([
-      fetchJsonWithRetry(`${API_URL}`),
-      fetchJsonWithRetry(`${API_URL}?action=getProducts`),
-      fetchJsonWithRetry(`${API_URL}?action=getCA_SKUs`),
-      fetchJsonWithRetry(`${API_URL}?action=getBankData`),
-      fetchJsonWithRetry(`${API_URL}?action=getSellerContacts`),
-    ]);
-
-    const failed: string[] = [];
-
-    if (clientsResult.status === 'fulfilled') setAllClientEntries(clientsResult.value);
-    else { console.error("Error fetching clients:", clientsResult.reason); failed.push("clientes"); }
-
-    if (productsResult.status === 'fulfilled') setAllPyMProducts(productsResult.value);
-    else { console.error("Error fetching PyM products:", productsResult.reason); failed.push("productos PyM"); }
-
-    if (caResult.status === 'fulfilled') setAllCA_SKUs(caResult.value);
-    else { console.error("Error fetching CA SKUs:", caResult.reason); failed.push("productos CA"); }
-
-    if (bankResult.status === 'fulfilled') setBankData(bankResult.value);
-    else console.error("Error fetching bank data:", bankResult.reason);
-
-    if (sellerResult.status === 'fulfilled') setSellerContacts(sellerResult.value);
-    else { console.error("Error fetching seller contacts:", sellerResult.reason); failed.push("vendedores"); }
-
-    if (failed.length > 0) {
-      setLoadError(`No se pudo cargar: ${failed.join(', ')}. (Reintentado automáticamente sin éxito — revisa las Ejecuciones en Apps Script)`);
+    try {
+      const data = await fetchJsonWithRetry(`${API_URL}?action=getAll`);
+      setAllClientEntries(data.clients || []);
+      setAllPyMProducts(data.products || []);
+      setAllCA_SKUs(data.caSkus || []);
+      setBankData(data.bankData || []);
+      setSellerContacts(data.sellerContacts || {});
+    } catch (err) {
+      console.error("Error fetching initial data:", err);
+      setLoadError("No se pudieron cargar los datos iniciales. (Reintentado automáticamente sin éxito — revisa las Ejecuciones en Apps Script)");
     }
   };
   useEffect(() => { fetchData(); }, []);
@@ -96,9 +81,12 @@ export default function CotizadorPage() {
     const singleOption = Array.isArray(option) ? option[0] : option;
     setSelectedCompany(singleOption);
     setSelectedPDV(null);
-    setEditableRut('');
     setEditableDireccion('');
     setEditableComuna('');
+    // <-- NUEVO: el RUT es el mismo para todas las obras de la empresa, así que
+    // se rellena apenas se elige la empresa (no hace falta esperar a elegir la obra)
+    const matchingEntry = allClientEntries.find(c => c.empresa === singleOption?.value);
+    setEditableRut(matchingEntry?.rut || '');
   };
 
   const handleSelectPDV = (option: SingleValue<SelectOption> | MultiValue<SelectOption>) => {
