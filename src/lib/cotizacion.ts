@@ -9,6 +9,7 @@ export const IVA_RATE = 0.19;
 // Cuando la entrega es "Retiro en planta", esta es la dirección que va en la cotización.
 export const ENTREGA_RETIRO = 'Retiro en planta';
 export const DIRECCION_RETIRO = 'Retiro Bodegas Piettra';
+export const COMUNA_RETIRO = 'Lampa';
 
 // fetch con reintentos: fallas transitorias de Apps Script no deberían bloquear la carga.
 export async function fetchJsonWithRetry<T = unknown>(url: string, retries = 2, delayMs = 1200): Promise<T> {

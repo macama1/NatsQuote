@@ -211,8 +211,17 @@ export function ClientSelector({
       </div>
 
       <div>
-        <label className="block mb-2 font-semibold">Comuna</label>
-        <input type="text" value={editableComuna} onChange={e => setEditableComuna(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600" />
+        <label className="block mb-2 font-semibold">
+          Comuna
+          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por retiro en planta)</span>}
+        </label>
+        <input
+          type="text"
+          value={editableComuna}
+          onChange={e => setEditableComuna(e.target.value)}
+          readOnly={direccionBloqueada}
+          className={`w-full p-2.5 rounded border ${direccionBloqueada ? 'bg-slate-800 border-slate-700 text-slate-300 cursor-not-allowed' : 'bg-slate-700 border-slate-600'}`}
+        />
       </div>
       <div className="hidden md:block"></div>
 
