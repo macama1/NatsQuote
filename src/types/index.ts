@@ -32,7 +32,9 @@ export type QuoteProduct = {
   linea: 'PyM' | 'CA';
   quantity: number;
   currentPrice: number;
-  originalData: PyMProduct | CA_SKU; // <-- CORRECCIÓN APLICADA AQUÍ
+  basePrice: number;
+  // Solo existe en productos agregados en esta sesión (no en cotizaciones recuperadas).
+  originalData?: PyMProduct | CA_SKU;
 };
 
 export type SelectOption = { 

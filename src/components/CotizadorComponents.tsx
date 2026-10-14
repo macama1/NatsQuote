@@ -5,6 +5,7 @@ import CreatableSelect from 'react-select/creatable';
 import Image from 'next/image';
 
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption } from '@/types';
+import { formatCLP, lineTotal } from '@/lib/cotizacion';
 
 /* ============================================================
    QuoteHeader
@@ -101,11 +102,11 @@ export function ClientSelector({
 }: ClientSelectorProps) {
 
   const companyOptions: SelectOption[] = useMemo(() =>
-    [...new Set((allClientEntries || []).map(c => c.empresa))].sort().map(company => ({ value: company, label: company }))
+    [...new Set((allClientEntries || []).map(c => String(c.empresa ?? '')).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')).map(company => ({ value: company, label: company }))
   , [allClientEntries]);
 
   const pdvOptions: SelectOption[] = useMemo(() =>
-    (allClientEntries || []).filter(c => c.empresa === selectedCompany?.value).map(pdv => ({ value: pdv.id, label: pdv.obraPDV }))
+    (allClientEntries || []).filter(c => c.empresa === selectedCompany?.value).map(pdv => ({ value: String(pdv.id), label: String(pdv.obraPDV ?? '') }))
   , [allClientEntries, selectedCompany]);
 
   const customSelectStyles: StylesConfig<SelectOption> = {
@@ -179,13 +180,14 @@ export function ClientSelector({
             className="w-full p-2.5 rounded bg-slate-700 border border-slate-600"
           >
             <option value="">-- Seleccione un vendedor --</option>
+            {genericVendedor && !vendedorOptions.includes(genericVendedor) && <option value={genericVendedor}>{genericVendedor}</option>}
             {vendedorOptions.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         </div>
       ) : (
         <div>
           <label className="block mb-2 font-semibold">2. Seleccione Obra/PDV</label>
-          <Select instanceId="pdv-select" options={pdvOptions} value={pdvOptions.find(opt => opt.value === selectedPDV?.id) || null} onChange={onSelectPDV} styles={customSelectStyles} isDisabled={!selectedCompany} placeholder={selectedCompany ? "Buscar obra..." : "Seleccione una empresa primero"} isClearable />
+          <Select instanceId="pdv-select" options={pdvOptions} value={pdvOptions.find(opt => opt.value === String(selectedPDV?.id)) || null} onChange={onSelectPDV} styles={customSelectStyles} isDisabled={!selectedCompany} placeholder={selectedCompany ? "Buscar obra..." : "Seleccione una empresa primero"} isClearable />
         </div>
       )}
 
@@ -300,7 +302,7 @@ export function ProductTable({ products, onQuantityChange, onDelete, onPriceChan
                 <td className="p-3 text-center">
                   <QuantityInput product={p} onQuantityChange={onQuantityChange} />
                 </td>
-                <td className="p-3 text-right font-semibold">${(p.currentPrice * p.quantity).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
+                <td className="p-3 text-right font-semibold">{formatCLP(lineTotal(p))}</td>
                 <td className="p-3 text-center">
                   <button onClick={() => onDelete(p.code)} className="text-red-500 hover:text-red-400 font-bold text-2xl transition-colors duration-200">×</button>
                 </td>
@@ -331,15 +333,15 @@ export function QuoteTotals({ subtotal, iva, total, isGenerating, isClientSelect
       <div className="w-full md:w-2/5 lg:w-1/3 space-y-2 bg-slate-900 p-4 rounded-lg border border-slate-700">
         <div className="flex justify-between text-lg">
           <span className="text-slate-400">Subtotal:</span>
-          <span>${subtotal.toLocaleString('es-CL')}</span>
+          <span>{formatCLP(subtotal)}</span>
         </div>
         <div className="flex justify-between text-lg">
           <span className="text-slate-400">IVA (19%):</span>
-          <span>${iva.toLocaleString('es-CL')}</span>
+          <span>{formatCLP(iva)}</span>
         </div>
         <div className="flex justify-between text-2xl font-bold border-t border-slate-600 pt-2 mt-2">
           <span>Total a Pagar:</span>
-          <span>${total.toLocaleString('es-CL')}</span>
+          <span>{formatCLP(total)}</span>
         </div>
         <button
           onClick={onGenerateQuote}
@@ -358,7 +360,7 @@ export function QuoteTotals({ subtotal, iva, total, isGenerating, isClientSelect
    ============================================================ */
 function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string; }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
+    <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center p-4">
       <div className="bg-slate-800 p-6 rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col shadow-lg">
         <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
           <h2 className="text-2xl font-bold">{title}</h2>
@@ -384,13 +386,22 @@ export function ProductModal({ modalType, onClose, allPyMProducts, allCA_SKUs, o
   const caModelos = useMemo(() => [...new Set(allCA_SKUs.map(p => p.modelo))], [allCA_SKUs]);
   const caColores = useMemo(() => allCA_SKUs.filter(p => p.modelo === selectedModelo), [allCA_SKUs, selectedModelo]);
 
+  // String(...) evita que el buscador se rompa si un código o nombre en la planilla es solo números.
+  const filteredPyM = useMemo(() => {
+    const q = pymSearch.trim().toLowerCase();
+    if (!q) return allPyMProducts;
+    return allPyMProducts.filter(p =>
+      String(p.productName ?? '').toLowerCase().includes(q) || String(p.code ?? '').toLowerCase().includes(q)
+    );
+  }, [allPyMProducts, pymSearch]);
+
   return (
     <Modal onClose={onClose} title={`Seleccionar Producto ${modalType}`}>
       {modalType === 'PyM' && (
         <div>
           <input type="text" placeholder="Buscar por código o nombre..." value={pymSearch} onChange={e => setPymSearch(e.target.value)} className="w-full p-2 mb-4 bg-slate-700 rounded border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
           <div className="space-y-1">
-            {allPyMProducts.filter(p => p.productName.toLowerCase().includes(pymSearch.toLowerCase()) || p.code.toLowerCase().includes(pymSearch.toLowerCase())).map(p => (
+            {filteredPyM.map(p => (
               <div key={p.code} onClick={() => onSelectProduct(p)} className="p-2 hover:bg-slate-700 cursor-pointer rounded">
                 <span className="font-bold">{p.code}</span> - {p.productName}
               </div>
