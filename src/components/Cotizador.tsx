@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption, BankInfo, SellerContacts } from '@/types';
 import { QuoteHeader, ClientSelector, ProductTable, QuoteTotals, ProductModal, ClientOnly } from '@/components/CotizadorComponents';
-import { API_URL, fetchJsonWithRetry, computeTotals, validateProducts } from '@/lib/cotizacion';
+import { API_URL, fetchJsonWithRetry, computeTotals, validateProducts, ENTREGA_RETIRO, DIRECCION_RETIRO } from '@/lib/cotizacion';
 
 type AllData = {
   clients?: ClientEntry[];
@@ -30,7 +30,7 @@ const GENERIC_ID = 'GENERICO';
 // Una sola pantalla para "Nueva cotización" (modo 'nuevo') y "Recuperar cotización" (modo 'recuperar').
 export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
   const [formaDePago, setFormaDePago] = useState('Contado');
-  const [formaDeEntrega, setFormaDeEntrega] = useState('Retiro en planta');
+  const [formaDeEntrega, setFormaDeEntrega] = useState(ENTREGA_RETIRO);
   const [allClientEntries, setAllClientEntries] = useState<ClientEntry[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<SelectOption | null>(null);
   const [selectedPDV, setSelectedPDV] = useState<ClientEntry | null>(null);
@@ -117,6 +117,11 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
     resetClientFields();
   };
 
+  // Con "Retiro en planta" la dirección es fija. La dirección del cliente se conserva aparte,
+  // así reaparece si el vendedor cambia a "Despacho a obra".
+  const esRetiro = formaDeEntrega === ENTREGA_RETIRO;
+  const direccionEfectiva = esRetiro ? DIRECCION_RETIRO : editableDireccion;
+
   // La lista de vendedores sale de "Correos", independiente de la carga de clientes.
   const vendedorOptions = useMemo(() => Object.keys(sellerContacts).sort(), [sellerContacts]);
 
@@ -128,7 +133,7 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
             empresa: genericEmpresaName.trim(),
             obraPDV: 'Cotización Genérica',
             vendedor: genericVendedor.trim(),
-            direccion: editableDireccion,
+            direccion: direccionEfectiva,
             comuna: editableComuna,
             region: '',
             rut: editableRut,
@@ -168,10 +173,12 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
       }
 
       setEditableRut(String(client.rut ?? pdv.rut ?? ''));
-      setEditableDireccion(String(client.direccion ?? pdv.direccion ?? ''));
+      // Si la cotización guardada era de retiro, recuperamos la dirección real del cliente.
+      const savedDireccion = String(client.direccion ?? '');
+      setEditableDireccion(savedDireccion && savedDireccion !== DIRECCION_RETIRO ? savedDireccion : String(pdv.direccion ?? ''));
       setEditableComuna(String(client.comuna ?? pdv.comuna ?? ''));
       setFormaDePago(data.paymentMethod || 'Contado');
-      setFormaDeEntrega(data.deliveryMethod || 'Retiro en planta');
+      setFormaDeEntrega(data.deliveryMethod || ENTREGA_RETIRO);
       setQuoteProducts((data.quoteProducts || []).map(p => ({
         code: String(p.code ?? ''),
         description: String(p.description ?? ''),
@@ -246,7 +253,7 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
       const sellerContact = sellerContacts[String(effectivePDV.vendedor).trim()] || { email: '', phone: '' };
       const quoteData = {
         selectedPDV: effectivePDV,
-        editableClientData: { rut: editableRut, direccion: editableDireccion, comuna: editableComuna },
+        editableClientData: { rut: editableRut, direccion: direccionEfectiva, comuna: editableComuna },
         quoteProducts: quoteProducts.map(p => ({
           code: p.code, description: p.description, quantity: p.quantity,
           currentPrice: p.currentPrice, basePrice: p.basePrice
@@ -364,7 +371,8 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
           setFormaDeEntrega={setFormaDeEntrega}
           editableRut={editableRut}
           setEditableRut={setEditableRut}
-          editableDireccion={editableDireccion}
+          editableDireccion={direccionEfectiva}
+          direccionBloqueada={esRetiro}
           setEditableDireccion={setEditableDireccion}
           editableComuna={editableComuna}
           setEditableComuna={setEditableComuna}

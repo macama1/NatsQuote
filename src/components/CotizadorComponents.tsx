@@ -79,6 +79,7 @@ type ClientSelectorProps = {
   editableRut: string;
   setEditableRut: (value: string) => void;
   editableDireccion: string;
+  direccionBloqueada?: boolean;
   setEditableDireccion: (value: string) => void;
   editableComuna: string;
   setEditableComuna: (value: string) => void;
@@ -95,7 +96,7 @@ export function ClientSelector({
   allClientEntries, selectedCompany, selectedPDV,
   onSelectCompany, onSelectPDV,
   formaDePago, setFormaDePago, formaDeEntrega, setFormaDeEntrega,
-  editableRut, setEditableRut, editableDireccion, setEditableDireccion,
+  editableRut, setEditableRut, editableDireccion, setEditableDireccion, direccionBloqueada = false,
   editableComuna, setEditableComuna,
   isGenericMode, onToggleGenericMode, genericEmpresaName, setGenericEmpresaName,
   vendedorOptions, genericVendedor, setGenericVendedor
@@ -196,8 +197,17 @@ export function ClientSelector({
         <input type="text" value={editableRut} onChange={e => setEditableRut(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600" />
       </div>
       <div>
-        <label className="block mb-2 font-semibold">Dirección de Despacho</label>
-        <input type="text" value={editableDireccion} onChange={e => setEditableDireccion(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600" />
+        <label className="block mb-2 font-semibold">
+          Dirección de Despacho
+          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por retiro en planta)</span>}
+        </label>
+        <input
+          type="text"
+          value={editableDireccion}
+          onChange={e => setEditableDireccion(e.target.value)}
+          readOnly={direccionBloqueada}
+          className={`w-full p-2.5 rounded border ${direccionBloqueada ? 'bg-slate-800 border-slate-700 text-slate-300 cursor-not-allowed' : 'bg-slate-700 border-slate-600'}`}
+        />
       </div>
 
       <div>
