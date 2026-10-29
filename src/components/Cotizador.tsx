@@ -63,25 +63,29 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
   // Una sola llamada combinada (?action=getAll) en vez de 5 llamadas separadas.
-  const fetchData = useCallback(async () => {
-    setLoadError(null);
-    setIsLoadingData(true);
-    try {
-      const data = await fetchJsonWithRetry<AllData & { status?: string; message?: string }>(`${API_URL}?action=getAll`);
-      if (data.status === 'error') throw new Error(data.message);
-      setAllClientEntries(data.clients || []);
-      setAllPyMProducts(data.products || []);
-      setAllCA_SKUs(data.caSkus || []);
-      setBankData(data.bankData || []);
-      setSellerContacts(data.sellerContacts || {});
-    } catch (err) {
-      console.error('Error fetching initial data:', err);
-      setLoadError('No se pudieron cargar los datos iniciales. Revisa tu conexión o las Ejecuciones en Apps Script.');
-    } finally {
-      setIsLoadingData(false);
-    }
+  // El estado se actualiza solo cuando llega la respuesta (isLoadingData ya empieza en true).
+  const fetchData = useCallback(() => {
+    fetchJsonWithRetry<AllData & { status?: string; message?: string }>(`${API_URL}?action=getAll`)
+      .then(data => {
+        if (data.status === 'error') throw new Error(data.message);
+        setAllClientEntries(data.clients || []);
+        setAllPyMProducts(data.products || []);
+        setAllCA_SKUs(data.caSkus || []);
+        setBankData(data.bankData || []);
+        setSellerContacts(data.sellerContacts || {});
+      })
+      .catch(err => {
+        console.error('Error fetching initial data:', err);
+        setLoadError('No se pudieron cargar los datos iniciales. Revisa tu conexión o las Ejecuciones en Apps Script.');
+      })
+      .finally(() => setIsLoadingData(false));
   }, []);
   useEffect(() => { fetchData(); }, [fetchData]);
+  const retryFetch = () => {
+    setLoadError(null);
+    setIsLoadingData(true);
+    fetchData();
+  };
 
   const resetClientFields = () => {
     setSelectedCompany(null);
@@ -278,7 +282,6 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
 
       const response = await fetch(API_URL, {
         method: 'POST',
-        mode: 'cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(quoteData)
       });
@@ -366,7 +369,7 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
       {loadError && (
         <div className="mb-6 p-3 bg-red-900/50 border border-red-600 rounded text-red-200 flex items-center justify-between">
           <span>{loadError}</span>
-          <button onClick={fetchData} className="underline font-semibold ml-4">Reintentar</button>
+          <button onClick={retryFetch} className="underline font-semibold ml-4">Reintentar</button>
         </div>
       )}
 
