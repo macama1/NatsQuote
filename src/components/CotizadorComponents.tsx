@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useSyncExternalStore } from 'react';
 import Select, { StylesConfig, SingleValue, MultiValue } from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import Image from 'next/image';
@@ -29,10 +29,8 @@ export function QuoteHeader() {
    ClientOnly (evita problemas de hidratación con react-select)
    ============================================================ */
 export function ClientOnly({ children }: { children: React.ReactNode }) {
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  // false en el servidor y en la hidratación, true en el navegador.
+  const hasMounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   if (!hasMounted) {
     return (
@@ -240,10 +238,16 @@ export function ClientSelector({
    ============================================================ */
 function QuantityInput({ product, onQuantityChange }: { product: QuoteProduct; onQuantityChange: (rowId: string, newQuantity: number) => void; }) {
   const [inputValue, setInputValue] = useState(product.quantity.toString().replace('.', ','));
+  const [prevQuantity, setPrevQuantity] = useState(product.quantity);
 
-  useEffect(() => {
-    setInputValue(product.quantity.toString().replace('.', ','));
-  }, [product.quantity]);
+  // Si la cantidad cambia desde afuera (p. ej. al recuperar una cotización), se actualiza el texto.
+  // No se sobrescribe si lo escrito ya equivale a esa cantidad (así "1," no salta a "1" mientras se tipea).
+  if (product.quantity !== prevQuantity) {
+    setPrevQuantity(product.quantity);
+    if (parseFloat(inputValue.replace(',', '.')) !== product.quantity) {
+      setInputValue(product.quantity.toString().replace('.', ','));
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

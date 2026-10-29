@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NatsQuote — Cotizador NatStone / Piettra
 
-## Getting Started
+Aplicación web para que los vendedores armen cotizaciones de productos **PyM** (pegamentos y morteros) y **CA** (piedra), y generen el PDF.
 
-First, run the development server:
+- `/` — Nueva cotización
+- `/recuperar` — Cargar una cotización guardada por su número, modificarla y generar una nueva
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Cómo funciona
+
+- El frontend es Next.js 16 (React 19), en `src/components/Cotizador.tsx`. Una sola pantalla sirve para "nueva" y "recuperar".
+- Los datos y el PDF los maneja un **Google Apps Script**: clientes/PDV, productos, SKUs CA, cuentas bancarias, vendedores, guardar la cotización y crear el PDF en Drive.
+- El navegador **no llama directo al Apps Script**. Llama a la ruta del servidor `src/app/api/cotizador/route.ts`, que es la única que conoce la URL del script. Esa ruta solo deja pasar las acciones que usa la app (`getAll`, `getQuote` y el POST que genera la cotización).
+
+## Formas de entrega
+
+Están en `src/lib/cotizacion.ts`:
+
+| Forma de entrega | Dirección en la cotización | Comuna |
+|---|---|---|
+| Retiro en planta | Retiro Bodegas Piettra | Lampa |
+| Retiro Bodega TVP | Retiro Bodega TVP San Pedro | San Pedro de la Paz |
+| Despacho a obra | la del cliente (editable) | la del cliente (editable) |
+
+Para agregar otra bodega: sumar una entrada en `RETIROS` y en `FORMAS_DE_ENTREGA`.
+
+## Variables de entorno
+
+Se configuran en Vercel → *Settings* → *Environment Variables* (y en `.env.local` para desarrollo).
+
+| Variable | Para qué |
+|---|---|
+| `APPS_SCRIPT_URL` | URL `/exec` de la implementación del Apps Script. Si no está, se usa la URL antigua escrita en `route.ts`. |
+| `APPS_SCRIPT_TOKEN` | Opcional. Clave que se envía como parámetro `token` en cada llamada al script. |
+
+### Activar la clave en el Apps Script
+
+1. Inventar una clave larga y ponerla en `APPS_SCRIPT_TOKEN` en Vercel.
+2. En el Apps Script: *Configuración del proyecto* → *Propiedades del script* → agregar `TOKEN` con la misma clave.
+3. Al inicio de `doGet(e)` y de `doPost(e)` agregar:
+
+```js
+const token = PropertiesService.getScriptProperties().getProperty('TOKEN');
+if (token && e.parameter.token !== token) {
+  return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'No autorizado' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Guardar y crear una **nueva implementación**. Poner su URL en `APPS_SCRIPT_URL` y archivar la implementación antigua (su URL quedó publicada en el historial del repositorio).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Desarrollo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm install
+npm run dev     # http://localhost:3000
+npm run lint
+npm run build
+```

@@ -1,8 +1,9 @@
 // src/lib/cotizacion.ts
 // Lógica compartida entre "Nueva cotización" y "Recuperar cotización".
 
-export const API_URL =
-  'https://script.google.com/macros/s/AKfycbyxd8jZhYGbJJRh2dkWa4e8kvHE1NsO9zf9HnvASPOog2d3y5QIsyPkt-t-fl8FaT6bKQ/exec';
+// Las llamadas pasan por la ruta del servidor (src/app/api/cotizador/route.ts), que es la única
+// que conoce la URL del Apps Script.
+export const API_URL = '/api/cotizador';
 
 export const IVA_RATE = 0.19;
 
