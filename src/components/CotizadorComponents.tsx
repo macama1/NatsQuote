@@ -200,7 +200,7 @@ export function ClientSelector({
       <div>
         <label className="block mb-2 font-semibold">
           Dirección de Despacho
-          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por {motivoBloqueo.toLowerCase()})</span>}
+          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática: {motivoBloqueo})</span>}
         </label>
         <input
           type="text"
@@ -214,7 +214,7 @@ export function ClientSelector({
       <div>
         <label className="block mb-2 font-semibold">
           Comuna
-          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por {motivoBloqueo.toLowerCase()})</span>}
+          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática: {motivoBloqueo})</span>}
         </label>
         <input
           type="text"
