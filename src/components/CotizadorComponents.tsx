@@ -5,7 +5,7 @@ import CreatableSelect from 'react-select/creatable';
 import Image from 'next/image';
 
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption } from '@/types';
-import { formatCLP, lineTotal } from '@/lib/cotizacion';
+import { formatCLP, lineTotal, FORMAS_DE_ENTREGA } from '@/lib/cotizacion';
 
 /* ============================================================
    QuoteHeader
@@ -80,6 +80,7 @@ type ClientSelectorProps = {
   setEditableRut: (value: string) => void;
   editableDireccion: string;
   direccionBloqueada?: boolean;
+  motivoBloqueo?: string;
   setEditableDireccion: (value: string) => void;
   editableComuna: string;
   setEditableComuna: (value: string) => void;
@@ -96,7 +97,7 @@ export function ClientSelector({
   allClientEntries, selectedCompany, selectedPDV,
   onSelectCompany, onSelectPDV,
   formaDePago, setFormaDePago, formaDeEntrega, setFormaDeEntrega,
-  editableRut, setEditableRut, editableDireccion, setEditableDireccion, direccionBloqueada = false,
+  editableRut, setEditableRut, editableDireccion, setEditableDireccion, direccionBloqueada = false, motivoBloqueo = '',
   editableComuna, setEditableComuna,
   isGenericMode, onToggleGenericMode, genericEmpresaName, setGenericEmpresaName,
   vendedorOptions, genericVendedor, setGenericVendedor
@@ -169,7 +170,7 @@ export function ClientSelector({
       <div>
         <label className="block mb-2 font-semibold">Forma de Entrega:</label>
         <select value={formaDeEntrega} onChange={e => setFormaDeEntrega(e.target.value)} className="w-full p-2.5 rounded bg-slate-700 border border-slate-600">
-          <option>Retiro en planta</option><option>Despacho a obra</option>
+          {FORMAS_DE_ENTREGA.map(f => <option key={f}>{f}</option>)}
         </select>
       </div>
       {isGenericMode ? (
@@ -199,7 +200,7 @@ export function ClientSelector({
       <div>
         <label className="block mb-2 font-semibold">
           Dirección de Despacho
-          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por retiro en planta)</span>}
+          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por {motivoBloqueo.toLowerCase()})</span>}
         </label>
         <input
           type="text"
@@ -213,7 +214,7 @@ export function ClientSelector({
       <div>
         <label className="block mb-2 font-semibold">
           Comuna
-          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por retiro en planta)</span>}
+          {direccionBloqueada && <span className="ml-2 text-xs font-normal text-slate-400">(automática por {motivoBloqueo.toLowerCase()})</span>}
         </label>
         <input
           type="text"

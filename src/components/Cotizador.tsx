@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { ClientEntry, PyMProduct, CA_SKU, QuoteProduct, SelectOption, BankInfo, SellerContacts } from '@/types';
 import { QuoteHeader, ClientSelector, ProductTable, QuoteTotals, ProductModal, ClientOnly } from '@/components/CotizadorComponents';
-import { API_URL, fetchJsonWithRetry, computeTotals, validateProducts, ENTREGA_RETIRO, DIRECCION_RETIRO, COMUNA_RETIRO } from '@/lib/cotizacion';
+import { API_URL, fetchJsonWithRetry, computeTotals, validateProducts, ENTREGA_RETIRO, RETIROS, esDireccionDeRetiro } from '@/lib/cotizacion';
 
 type AllData = {
   clients?: ClientEntry[];
@@ -117,11 +117,12 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
     resetClientFields();
   };
 
-  // Con "Retiro en planta" la dirección es fija. La dirección del cliente se conserva aparte,
-  // así reaparece si el vendedor cambia a "Despacho a obra".
-  const esRetiro = formaDeEntrega === ENTREGA_RETIRO;
-  const direccionEfectiva = esRetiro ? DIRECCION_RETIRO : editableDireccion;
-  const comunaEfectiva = esRetiro ? COMUNA_RETIRO : editableComuna;
+  // Con un retiro (planta o bodega TVP) la dirección y comuna son fijas. La dirección del cliente
+  // se conserva aparte, así reaparece si el vendedor cambia a "Despacho a obra".
+  const retiro = RETIROS[formaDeEntrega];
+  const esRetiro = !!retiro;
+  const direccionEfectiva = retiro ? retiro.direccion : editableDireccion;
+  const comunaEfectiva = retiro ? retiro.comuna : editableComuna;
 
   // La lista de vendedores sale de "Correos", independiente de la carga de clientes.
   const vendedorOptions = useMemo(() => Object.keys(sellerContacts).sort(), [sellerContacts]);
@@ -176,9 +177,10 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
       setEditableRut(String(client.rut ?? pdv.rut ?? ''));
       // Si la cotización guardada era de retiro, recuperamos la dirección real del cliente.
       const savedDireccion = String(client.direccion ?? '');
-      setEditableDireccion(savedDireccion && savedDireccion !== DIRECCION_RETIRO ? savedDireccion : String(pdv.direccion ?? ''));
+      const eraRetiro = esDireccionDeRetiro(savedDireccion);
+      setEditableDireccion(savedDireccion && !eraRetiro ? savedDireccion : String(pdv.direccion ?? ''));
       const savedComuna = String(client.comuna ?? '');
-      setEditableComuna(savedComuna && savedDireccion !== DIRECCION_RETIRO ? savedComuna : String(pdv.comuna ?? ''));
+      setEditableComuna(savedComuna && !eraRetiro ? savedComuna : String(pdv.comuna ?? ''));
       setFormaDePago(data.paymentMethod || 'Contado');
       setFormaDeEntrega(data.deliveryMethod || ENTREGA_RETIRO);
       setQuoteProducts((data.quoteProducts || []).map(p => ({
@@ -375,6 +377,7 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
           setEditableRut={setEditableRut}
           editableDireccion={direccionEfectiva}
           direccionBloqueada={esRetiro}
+          motivoBloqueo={formaDeEntrega}
           setEditableDireccion={setEditableDireccion}
           editableComuna={comunaEfectiva}
           setEditableComuna={setEditableComuna}

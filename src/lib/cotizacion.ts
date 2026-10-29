@@ -6,10 +6,23 @@ export const API_URL =
 
 export const IVA_RATE = 0.19;
 
-// Cuando la entrega es "Retiro en planta", esta es la dirección que va en la cotización.
+// Formas de entrega, en el orden en que aparecen en el selector.
 export const ENTREGA_RETIRO = 'Retiro en planta';
-export const DIRECCION_RETIRO = 'Retiro Bodegas Piettra';
-export const COMUNA_RETIRO = 'Lampa';
+export const ENTREGA_RETIRO_TVP = 'Retiro Bodega TVP';
+export const ENTREGA_DESPACHO = 'Despacho a obra';
+export const FORMAS_DE_ENTREGA = [ENTREGA_RETIRO, ENTREGA_RETIRO_TVP, ENTREGA_DESPACHO];
+
+// Para cada forma de retiro, la dirección y comuna fijas que van en la cotización.
+// Para agregar otra bodega basta con sumar una entrada aquí y en FORMAS_DE_ENTREGA.
+export const RETIROS: Record<string, { direccion: string; comuna: string }> = {
+  [ENTREGA_RETIRO]: { direccion: 'Retiro Bodegas Piettra', comuna: 'Lampa' },
+  [ENTREGA_RETIRO_TVP]: { direccion: 'Retiro Bodega TVP San Pedro', comuna: 'San Pedro de la Paz' },
+};
+
+// true si la dirección guardada es la de alguna bodega (no la dirección real del cliente).
+export function esDireccionDeRetiro(direccion: string) {
+  return Object.values(RETIROS).some(r => r.direccion === direccion);
+}
 
 // fetch con reintentos: fallas transitorias de Apps Script no deberían bloquear la carga.
 export async function fetchJsonWithRetry<T = unknown>(url: string, retries = 2, delayMs = 1200): Promise<T> {
