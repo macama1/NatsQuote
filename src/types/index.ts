@@ -27,6 +27,8 @@ export type CA_SKU = {
 };
 
 export type QuoteProduct = {
+  // Identificador de la fila: permite tener el mismo producto en dos líneas (p. ej. con distinto precio).
+  rowId: string;
   code: string;
   description: string;
   linea: 'PyM' | 'CA';

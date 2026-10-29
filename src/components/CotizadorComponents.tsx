@@ -238,7 +238,7 @@ export function ClientSelector({
 /* ============================================================
    ProductTable (+ QuantityInput interno, no exportado)
    ============================================================ */
-function QuantityInput({ product, onQuantityChange }: { product: QuoteProduct; onQuantityChange: (code: string, newQuantity: number) => void; }) {
+function QuantityInput({ product, onQuantityChange }: { product: QuoteProduct; onQuantityChange: (rowId: string, newQuantity: number) => void; }) {
   const [inputValue, setInputValue] = useState(product.quantity.toString().replace('.', ','));
 
   useEffect(() => {
@@ -251,9 +251,9 @@ function QuantityInput({ product, onQuantityChange }: { product: QuoteProduct; o
 
     const numericValue = parseFloat(value.replace(',', '.'));
     if (!isNaN(numericValue)) {
-      onQuantityChange(product.code, numericValue);
+      onQuantityChange(product.rowId, numericValue);
     } else if (value === '' || value === '0,') {
-      onQuantityChange(product.code, 0);
+      onQuantityChange(product.rowId, 0);
     }
   };
 
@@ -261,7 +261,7 @@ function QuantityInput({ product, onQuantityChange }: { product: QuoteProduct; o
     const numericValue = parseFloat(inputValue.replace(',', '.'));
     if (isNaN(numericValue) || numericValue <= 0) {
       setInputValue('0');
-      onQuantityChange(product.code, 0);
+      onQuantityChange(product.rowId, 0);
     } else {
       setInputValue(numericValue.toString().replace('.', ','));
     }
@@ -280,9 +280,9 @@ function QuantityInput({ product, onQuantityChange }: { product: QuoteProduct; o
 
 type ProductTableProps = {
   products: QuoteProduct[];
-  onQuantityChange: (code: string, newQuantity: number) => void;
-  onDelete: (code: string) => void;
-  onPriceChange: (code: string, newPrice: number) => void;
+  onQuantityChange: (rowId: string, newQuantity: number) => void;
+  onDelete: (rowId: string) => void;
+  onPriceChange: (rowId: string, newPrice: number) => void;
 };
 
 export function ProductTable({ products, onQuantityChange, onDelete, onPriceChange }: ProductTableProps) {
@@ -305,7 +305,7 @@ export function ProductTable({ products, onQuantityChange, onDelete, onPriceChan
             {products.length === 0 ? (
               <tr><td colSpan={6} className="text-center p-8 text-slate-400">Aún no has agregado productos.</td></tr>
             ) : products.map(p => (
-              <tr key={p.code} className="border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50">
+              <tr key={p.rowId} className="border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50">
                 <td className="p-3 font-mono">{p.code}</td>
                 <td className="p-3">{p.description}</td>
                 <td className="p-3 text-right">
@@ -314,7 +314,7 @@ export function ProductTable({ products, onQuantityChange, onDelete, onPriceChan
                     <input
                       type="number"
                       value={p.currentPrice}
-                      onChange={(e) => onPriceChange(p.code, parseFloat(e.target.value) || 0)}
+                      onChange={(e) => onPriceChange(p.rowId, parseFloat(e.target.value) || 0)}
                       className="w-28 p-1 text-right bg-slate-700 rounded border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
@@ -324,7 +324,7 @@ export function ProductTable({ products, onQuantityChange, onDelete, onPriceChan
                 </td>
                 <td className="p-3 text-right font-semibold">{formatCLP(lineTotal(p))}</td>
                 <td className="p-3 text-center">
-                  <button onClick={() => onDelete(p.code)} className="text-red-500 hover:text-red-400 font-bold text-2xl transition-colors duration-200">×</button>
+                  <button onClick={() => onDelete(p.rowId)} className="text-red-500 hover:text-red-400 font-bold text-2xl transition-colors duration-200">×</button>
                 </td>
               </tr>
             ))}

@@ -20,12 +20,15 @@ type SavedQuote = {
   message?: string;
   selectedPDV?: ClientEntry;
   editableClientData?: { rut?: string; direccion?: string; comuna?: string };
-  quoteProducts?: { code: string; description: string; quantity: number; currentPrice: number; basePrice?: number }[];
+  quoteProducts?: { code: string; description: string; linea?: string; quantity: number; currentPrice: number; basePrice?: number }[];
   paymentMethod?: string;
   deliveryMethod?: string;
 };
 
 const GENERIC_ID = 'GENERICO';
+
+let rowCounter = 0;
+const newRowId = () => `r${Date.now()}-${rowCounter++}`;
 
 // Una sola pantalla para "Nueva cotización" (modo 'nuevo') y "Recuperar cotización" (modo 'recuperar').
 export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
@@ -183,10 +186,14 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
       setEditableComuna(savedComuna && !eraRetiro ? savedComuna : String(pdv.comuna ?? ''));
       setFormaDePago(data.paymentMethod || 'Contado');
       setFormaDeEntrega(data.deliveryMethod || ENTREGA_RETIRO);
+      // La línea (PyM/CA) se toma de lo guardado; en cotizaciones antiguas que no la traen,
+      // se deduce buscando el código en el catálogo CA.
+      const caCodes = new Set(allCA_SKUs.map(c => String(c.code)));
       setQuoteProducts((data.quoteProducts || []).map(p => ({
+        rowId: newRowId(),
         code: String(p.code ?? ''),
         description: String(p.description ?? ''),
-        linea: 'PyM' as const,
+        linea: (p.linea === 'CA' || (p.linea !== 'PyM' && caCodes.has(String(p.code)))) ? 'CA' as const : 'PyM' as const,
         quantity: Number(p.quantity) || 0,
         currentPrice: Number(p.currentPrice) || 0,
         basePrice: Number(p.basePrice ?? p.currentPrice) || 0,
@@ -204,30 +211,31 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
   // --- Productos ---
   const handleSelectProduct = (productData: PyMProduct | CA_SKU) => {
     const code = String(productData.code);
-    if (quoteProducts.some(p => String(p.code) === code)) {
-      alert('Este producto ya ha sido agregado.'); return;
+    if (quoteProducts.some(p => String(p.code) === code)
+        && !confirm('Este producto ya está en la cotización. ¿Agregar otra línea con el mismo producto (por ejemplo, con otro precio)?')) {
+      return;
     }
     let newProduct: QuoteProduct;
     if ('productName' in productData) {
       const fullDescription = productData.observations ? `${productData.productName} - ${productData.observations}` : String(productData.productName);
-      newProduct = { code, description: fullDescription, linea: 'PyM', quantity: 1, currentPrice: Number(productData.basePrice) || 0, basePrice: Number(productData.basePrice) || 0, originalData: productData };
+      newProduct = { rowId: newRowId(), code, description: fullDescription, linea: 'PyM', quantity: 1, currentPrice: Number(productData.basePrice) || 0, basePrice: Number(productData.basePrice) || 0, originalData: productData };
     } else {
-      newProduct = { code, description: `${productData.modelo} - ${productData.color}`, linea: 'CA', quantity: 1, currentPrice: Number(productData.basePrice) || 0, basePrice: Number(productData.basePrice) || 0, originalData: productData };
+      newProduct = { rowId: newRowId(), code, description: `${productData.modelo} - ${productData.color}`, linea: 'CA', quantity: 1, currentPrice: Number(productData.basePrice) || 0, basePrice: Number(productData.basePrice) || 0, originalData: productData };
     }
     setQuoteProducts(prev => [...prev, newProduct]);
     setModalType(null);
   };
 
-  const handlePriceChange = (code: string, newPrice: number) => {
-    setQuoteProducts(prev => prev.map(p => p.code === code ? { ...p, currentPrice: newPrice } : p));
+  const handlePriceChange = (rowId: string, newPrice: number) => {
+    setQuoteProducts(prev => prev.map(p => p.rowId === rowId ? { ...p, currentPrice: newPrice } : p));
   };
 
-  const handleQuantityChange = (code: string, newQuantity: number) => {
-    setQuoteProducts(prev => prev.map(p => p.code === code ? { ...p, quantity: Math.max(0, newQuantity) } : p));
+  const handleQuantityChange = (rowId: string, newQuantity: number) => {
+    setQuoteProducts(prev => prev.map(p => p.rowId === rowId ? { ...p, quantity: Math.max(0, newQuantity) } : p));
   };
 
-  const handleDeleteProduct = (code: string) => {
-    setQuoteProducts(prev => prev.filter(p => p.code !== code));
+  const handleDeleteProduct = (rowId: string) => {
+    setQuoteProducts(prev => prev.filter(p => p.rowId !== rowId));
   };
 
   const { subtotal, iva, total } = computeTotals(quoteProducts);
@@ -259,7 +267,7 @@ export default function Cotizador({ modo }: { modo: 'nuevo' | 'recuperar' }) {
         selectedPDV: effectivePDV,
         editableClientData: { rut: editableRut, direccion: direccionEfectiva, comuna: comunaEfectiva },
         quoteProducts: quoteProducts.map(p => ({
-          code: p.code, description: p.description, quantity: p.quantity,
+          code: p.code, description: p.description, linea: p.linea, quantity: p.quantity,
           currentPrice: p.currentPrice, basePrice: p.basePrice
         })),
         sellerContact,
